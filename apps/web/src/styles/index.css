@@ -1,0 +1,52 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    margin: 0;
+    /* Interface flat : pas de dégradé ni d'ombre lourde (section 7). */
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+}
+
+@layer components {
+  /* Différenciation ticket / événement — obligatoire (brief section 7). */
+  .planning-item {
+    @apply relative overflow-hidden rounded-md bg-surface text-xs;
+    border: 1px solid hsl(var(--border));
+  }
+
+  .planning-item--ticket {
+    border-left: 4px solid var(--item-color, hsl(var(--primary)));
+  }
+
+  .planning-item--event {
+    border-left: 4px dashed var(--item-color, hsl(var(--accent)));
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 6px,
+      hsl(var(--surface-muted)) 6px,
+      hsl(var(--surface-muted)) 7px
+    );
+  }
+
+  .planning-grid-line {
+    border-color: hsl(var(--planning-grid));
+  }
+}

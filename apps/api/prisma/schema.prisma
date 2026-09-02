@@ -1,0 +1,368 @@
+// ---------------------------------------------------------------------------
+// Pomelo-Paradigm — planning & tickets
+// Modèle de données (brief section 4).
+// Règle générale : suppression = archivage (soft delete via `archivedAt`).
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------------------------------------
+// Utilisateurs, équipes, sessions
+// --------------------------------------------------------------------------
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  archivedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  memberships       TeamMembership[]
+  roles             UserRole[]
+  sessions          Session[]
+  createdTickets    Ticket[]         @relation("TicketCreator")
+  assignments       TicketAssignee[]
+  createdEvents     Event[]          @relation("EventCreator")
+  eventParticipants EventParticipant[]
+  comments          Comment[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+
+  @@index([archivedAt])
+}
+
+model Team {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  color       String    @default("#14b8a6")
+  description String?
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  memberships TeamMembership[]
+  tickets     Ticket[]
+  events      Event[]
+}
+
+model TeamMembership {
+  id       String   @id @default(uuid())
+  userId   String
+  teamId   String
+  isLead   Boolean  @default(false)
+  joinedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([teamId])
+}
+
+/// Session révocable : un refresh token actif = une ligne.
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  refreshTokenHash String
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  lastUsedAt       DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// --------------------------------------------------------------------------
+// RBAC — permissions atomiques, aucun rôle figé dans le code
+// --------------------------------------------------------------------------
+
+model Role {
+  id          String    @id @default(uuid())
+  key         String    @unique // reader | editor | admin | ...
+  name        String
+  description String?
+  isSystem    Boolean   @default(false) // non supprimable depuis l'UI
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id          String @id @default(uuid())
+  key         String @unique // ex: ticket:create, planning:move
+  description String
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+// --------------------------------------------------------------------------
+// Clients & objets de projet
+// --------------------------------------------------------------------------
+
+model Client {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  contactName String?
+  email       String?
+  phone       String?
+  color       String    @default("#f97362")
+  notes       String?
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  projectObjects ProjectObject[]
+}
+
+/// « Object » est un mot réservé en JS/TS → ProjectObject.
+model ProjectObject {
+  id          String    @id @default(uuid())
+  clientId    String
+  name        String
+  reference   String?
+  description String?
+  color       String    @default("#f59e0b")
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  client  Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tickets Ticket[]
+  events  Event[]
+
+  @@unique([clientId, name])
+  @@index([clientId])
+}
+
+// --------------------------------------------------------------------------
+// Statuts personnalisables
+// --------------------------------------------------------------------------
+
+model Status {
+  id         String    @id @default(uuid())
+  key        String    @unique // todo | planned | in_progress | ...
+  name       String
+  color      String    @default("#94a3b8")
+  position   Int       @default(0)
+  isDefault  Boolean   @default(false)
+  isFinal    Boolean   @default(false) // statut de fin de cycle (Terminé, Annulé)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tickets Ticket[]
+
+  @@index([position])
+}
+
+// --------------------------------------------------------------------------
+// Tickets
+// --------------------------------------------------------------------------
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Ticket {
+  id                String    @id @default(uuid())
+  reference         Int       @default(autoincrement()) // PP-42
+  title             String
+  description       String?
+  statusId          String
+  priority          Priority  @default(MEDIUM)
+  color             String?
+  startAt           DateTime?
+  endAt             DateTime?
+  estimatedMinutes  Int?
+  actualMinutes     Int?
+  creatorId         String
+  teamId            String?
+  projectObjectId   String?
+  archivedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  status        Status         @relation(fields: [statusId], references: [id])
+  creator       User           @relation("TicketCreator", fields: [creatorId], references: [id])
+  team          Team?          @relation(fields: [teamId], references: [id])
+  projectObject ProjectObject? @relation(fields: [projectObjectId], references: [id])
+  assignees     TicketAssignee[]
+  comments      Comment[]
+
+  @@index([statusId])
+  @@index([teamId])
+  @@index([projectObjectId])
+  @@index([startAt, endAt])
+  @@index([archivedAt])
+}
+
+/// Jointure Ticket ↔ User, avec créneau optionnel propre à l'assigné.
+model TicketAssignee {
+  id         String    @id @default(uuid())
+  ticketId   String
+  userId     String
+  startAt    DateTime?
+  endAt      DateTime?
+  assignedAt DateTime  @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, userId])
+  @@index([userId, startAt])
+}
+
+// --------------------------------------------------------------------------
+// Événements (réunion, congé, rendez-vous, formation…)
+// --------------------------------------------------------------------------
+
+enum EventType {
+  MEETING
+  LEAVE
+  APPOINTMENT
+  TRAINING
+  OTHER
+}
+
+model Event {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?
+  type            EventType @default(MEETING)
+  color           String?
+  startAt         DateTime
+  endAt           DateTime
+  isAllDay        Boolean   @default(false)
+  location        String?
+  creatorId       String
+  teamId          String?
+  projectObjectId String?
+  archivedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  creator       User               @relation("EventCreator", fields: [creatorId], references: [id])
+  team          Team?              @relation(fields: [teamId], references: [id])
+  projectObject ProjectObject?     @relation(fields: [projectObjectId], references: [id])
+  participants  EventParticipant[]
+
+  @@index([startAt, endAt])
+  @@index([archivedAt])
+}
+
+model EventParticipant {
+  id      String  @id @default(uuid())
+  eventId String
+  userId  String
+  isOwner Boolean @default(false)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+// --------------------------------------------------------------------------
+// Commentaires, notifications, journal
+// --------------------------------------------------------------------------
+
+model Comment {
+  id         String    @id @default(uuid())
+  ticketId   String
+  authorId   String
+  body       String
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+enum EntityType {
+  TICKET
+  EVENT
+  COMMENT
+  CLIENT
+  PROJECT_OBJECT
+  USER
+  TEAM
+  ROLE
+  STATUS
+}
+
+model Notification {
+  id           String     @id @default(uuid())
+  recipientId  String
+  type         String // ticket.assigned, comment.created, planning.moved…
+  title        String
+  body         String?
+  entityType   EntityType
+  entityId     String
+  readAt       DateTime?
+  createdAt    DateTime   @default(now())
+
+  recipient User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt])
+}
+
+model AuditLog {
+  id         String     @id @default(uuid())
+  actorId    String?
+  action     String // ticket.created, ticket.moved, role.updated…
+  entityType EntityType
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime   @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

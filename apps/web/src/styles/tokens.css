@@ -1,0 +1,80 @@
+/* ---------------------------------------------------------------------------
+ * TOKENS DE COULEUR — POINT D'ENTRÉE UNIQUE DE LA CHARTE GRAPHIQUE
+ *
+ * Les valeurs ci-dessous sont des PLACEHOLDERS (teal / corail / ambre), comme
+ * indiqué en section 7 du brief. Quand la charte Pomelo-Paradigm définitive
+ * arrive, seules ces variables changent : aucun composant ne code une couleur
+ * en dur. Format HSL sans `hsl()` pour que Tailwind puisse moduler l'opacité.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --radius: 0.5rem;
+
+  /* Fonds et textes */
+  --background: 210 20% 98%;
+  --foreground: 222 22% 16%;
+  --surface: 0 0% 100%;
+  --surface-muted: 210 20% 96%;
+  --muted: 214 20% 94%;
+  --muted-foreground: 215 16% 47%;
+  --border: 214 20% 89%;
+  --input: 214 20% 89%;
+  --ring: 174 62% 40%;
+
+  /* Couleur principale — placeholder teal */
+  --primary: 174 62% 40%;
+  --primary-foreground: 0 0% 100%;
+  --primary-soft: 174 55% 94%;
+
+  /* Couleur secondaire — placeholder corail */
+  --accent: 8 89% 70%;
+  --accent-foreground: 0 0% 100%;
+  --accent-soft: 8 89% 96%;
+
+  /* Couleur d'appui — placeholder ambre */
+  --highlight: 38 92% 50%;
+  --highlight-foreground: 26 40% 18%;
+  --highlight-soft: 38 92% 95%;
+
+  /* États */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+
+  /* Planning */
+  --planning-grid: 214 20% 91%;
+  --planning-today: 174 55% 96%;
+  --planning-offhours: 210 20% 97%;
+}
+
+.dark {
+  --background: 222 24% 11%;
+  --foreground: 210 20% 96%;
+  --surface: 222 22% 15%;
+  --surface-muted: 222 20% 18%;
+  --muted: 222 18% 22%;
+  --muted-foreground: 215 16% 65%;
+  --border: 222 16% 26%;
+  --input: 222 16% 26%;
+
+  --primary-soft: 174 40% 20%;
+  --accent-soft: 8 40% 22%;
+  --highlight-soft: 38 40% 22%;
+
+  --planning-grid: 222 16% 24%;
+  --planning-today: 174 30% 18%;
+  --planning-offhours: 222 20% 13%;
+}
+
+/* Palette des catégories de tickets — bordure gauche pleine (section 7).
+   Les événements réutilisent les mêmes teintes mais en pointillés. */
+:root {
+  --category-1: 174 62% 40%;
+  --category-2: 8 89% 70%;
+  --category-3: 38 92% 50%;
+  --category-4: 199 89% 55%;
+  --category-5: 262 60% 62%;
+  --category-6: 142 60% 45%;
+}

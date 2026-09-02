@@ -1,0 +1,31 @@
+/** Miroir du catalogue serveur — l'UI masque, le serveur interdit. */
+export const P = {
+  PLANNING_VIEW: 'planning:view',
+  PLANNING_MOVE: 'planning:move',
+  TICKET_VIEW: 'ticket:view',
+  TICKET_CREATE: 'ticket:create',
+  TICKET_UPDATE: 'ticket:update',
+  TICKET_ARCHIVE: 'ticket:archive',
+  TICKET_ASSIGN: 'ticket:assign',
+  EVENT_VIEW: 'event:view',
+  EVENT_CREATE: 'event:create',
+  EVENT_UPDATE: 'event:update',
+  EVENT_ARCHIVE: 'event:archive',
+  COMMENT_VIEW: 'comment:view',
+  COMMENT_CREATE: 'comment:create',
+  COMMENT_ARCHIVE: 'comment:archive',
+  CLIENT_VIEW: 'client:view',
+  CLIENT_MANAGE: 'client:manage',
+  PROJECT_OBJECT_VIEW: 'project_object:view',
+  PROJECT_OBJECT_MANAGE: 'project_object:manage',
+  TEAM_VIEW: 'team:view',
+  TEAM_MANAGE: 'team:manage',
+  USER_VIEW: 'user:view',
+  USER_MANAGE: 'user:manage',
+  ROLE_MANAGE: 'role:manage',
+  STATUS_MANAGE: 'status:manage',
+  AUDIT_VIEW: 'audit:view',
+  DATA_EXPORT: 'data:export',
+} as const;
+
+export type PermissionKey = (typeof P)[keyof typeof P];
