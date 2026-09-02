@@ -1,0 +1,46 @@
+# Déploiement en un clic sur Render (https://render.com).
+# Une seule application sert le site et le moteur ; la base est créée à côté.
+# Sur Render : New → Blueprint → choisir ce dépôt GitHub.
+
+databases:
+  - name: pomelo-db
+    databaseName: pomelo_planning
+    user: pomelo
+    plan: free
+
+services:
+  - type: web
+    name: pomelo-planning
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: >-
+      npm install --include=dev &&
+      npx prisma generate --schema apps/api/prisma/schema.prisma &&
+      npm run build
+    # `db push` crée les tables directement d'après le schéma : pratique tant
+    # qu'aucun historique de migrations n'est versionné.
+    startCommand: >-
+      npx prisma db push --schema apps/api/prisma/schema.prisma --skip-generate &&
+      node apps/api/dist/main.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '22'
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pomelo-db
+          property: connectionString
+      # Générés automatiquement par Render, jamais écrits dans le code.
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      # À renseigner dans l'interface Render avant le premier démarrage :
+      # ce sont les identifiants du premier compte administrateur.
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
