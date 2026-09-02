@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -e
+
+cd "$(dirname "$0")/.."
+
+if [ ! -f .env ]; then
+  echo "→ Configuration"
+  cat > .env <<EOF
+DATABASE_URL="postgresql://pomelo:pomelo@db:5432/pomelo_planning?schema=public"
+API_PORT=3000
+NODE_ENV=development
+CORS_ORIGINS=http://localhost:5173
+JWT_ACCESS_SECRET=$(openssl rand -base64 48 | tr -d '\n')
+JWT_REFRESH_SECRET=$(openssl rand -base64 48 | tr -d '\n')
+JWT_ACCESS_TTL=15m
+JWT_REFRESH_TTL=30d
+SEED_ADMIN_EMAIL=admin@pomelo-paradigm.fr
+SEED_ADMIN_PASSWORD=Admin123!
+EOF
+fi
+
+echo "→ Installation des dépendances (quelques minutes la première fois)"
+npm install --no-audit --no-fund
+
+echo "→ Préparation de la base de données"
+npx prisma generate --schema apps/api/prisma/schema.prisma
+npx prisma db push --schema apps/api/prisma/schema.prisma --skip-generate
+
+echo "→ Jeu de démonstration"
+npm run db:seed || echo "  (déjà rempli, on continue)"
+
+echo ""
+echo "✅ Tout est prêt. L'application démarre toute seule."
+echo "   Onglet PORTS → ouvrir le port 5173 pour voir le planning."
