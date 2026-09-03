@@ -1,0 +1,27 @@
+# ---------------------------------------------------------------------------
+# Copier ce fichier en .env (jamais commité) — voir section 11 du brief.
+# ---------------------------------------------------------------------------
+
+# Base de données
+POSTGRES_USER=pomelo
+POSTGRES_PASSWORD=change_me_in_production
+POSTGRES_DB=pomelo_planning
+DATABASE_URL="postgresql://pomelo:change_me_in_production@localhost:5432/pomelo_planning?schema=public"
+
+# API
+API_PORT=3000
+NODE_ENV=development
+CORS_ORIGINS=http://localhost:5173
+
+# JWT — générer avec: openssl rand -base64 48
+JWT_ACCESS_SECRET=remplacer_par_un_secret_long_et_aleatoire
+JWT_REFRESH_SECRET=remplacer_par_un_autre_secret_long_et_aleatoire
+JWT_ACCESS_TTL=15m
+JWT_REFRESH_TTL=30d
+
+# Compte administrateur créé par le seed
+SEED_ADMIN_EMAIL=admin@pomelo-paradigm.fr
+SEED_ADMIN_PASSWORD=Admin123!
+
+# Frontend (Vite)
+VITE_API_URL=http://localhost:3000

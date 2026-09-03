@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, ShieldCheck, Users2, Tags } from 'lucide-react';
-import { api } from '@/lib/api';
+import { archiveStatus, createStatus, updateRolePermissions, updateStatus, updateUser } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
 import { Modal } from '@/components/ui/slide-over';
@@ -58,13 +58,12 @@ function UsersTab() {
   const teams = useTeams();
   const qc = useQueryClient();
   const toast = useToast();
-  const [creating, setCreating] = useState(false);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['users'] });
 
-  const update = async (id: string, payload: Record<string, unknown>) => {
+  const update = async (id: string, payload: Parameters<typeof updateUser>[1]) => {
     try {
-      await api.patch(`/users/${id}`, payload);
+      await updateUser(id, payload);
       void refresh();
     } catch (error) {
       toast.push(error instanceof Error ? error.message : 'Échec', { tone: 'error' });
@@ -75,11 +74,12 @@ function UsersTab() {
 
   return (
     <>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3">
         <h1 className="text-sm font-semibold">Utilisateurs</h1>
-        <Button size="sm" onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" /> Nouvel utilisateur
-        </Button>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Les comptes se créent depuis l'écran de connexion, onglet « Créer un compte ».
+          Attribuez ensuite un rôle ici : sans rôle, une personne ne voit rien.
+        </p>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border">
@@ -117,8 +117,21 @@ function UsersTab() {
                     ))}
                   </Select>
                 </td>
-                <td className="px-3 py-2 text-xs">
-                  {user.teams.map((t) => t.name).join(', ') || '—'}
+                <td className="px-3 py-2">
+                  <Select
+                    className="h-8 w-40"
+                    value={user.teams[0]?.id ?? ''}
+                    onChange={(e) =>
+                      void update(user.id, { teamIds: e.target.value ? [e.target.value] : [] })
+                    }
+                  >
+                    <option value="">Aucune</option>
+                    {(teams.data ?? []).map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </Select>
                 </td>
                 <td className="px-3 py-2">
                   <input
@@ -133,113 +146,7 @@ function UsersTab() {
         </table>
       </div>
 
-      {creating && (
-        <CreateUserModal
-          roles={(roles.data ?? []).map((r) => ({ id: r.id, name: r.name }))}
-          teams={(teams.data ?? []).map((t) => ({ id: t.id, name: t.name }))}
-          onClose={() => setCreating(false)}
-          onCreated={() => void refresh()}
-        />
-      )}
     </>
-  );
-}
-
-function CreateUserModal({
-  roles,
-  teams,
-  onClose,
-  onCreated,
-}: {
-  roles: { id: string; name: string }[];
-  teams: { id: string; name: string }[];
-  onClose: () => void;
-  onCreated: () => void;
-}) {
-  const toast = useToast();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [roleId, setRoleId] = useState(roles[0]?.id ?? '');
-  const [teamId, setTeamId] = useState('');
-
-  return (
-    <Modal open onOpenChange={(o) => !o && onClose()} title="Nouvel utilisateur">
-      <div className="space-y-3">
-        <div>
-          <Label htmlFor="user-name">Nom</Label>
-          <Input id="user-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="user-email">Email</Label>
-          <Input
-            id="user-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="user-password">Mot de passe provisoire (10 caractères min.)</Label>
-          <Input
-            id="user-password"
-            type="text"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="user-role">Rôle</Label>
-            <Select id="user-role" value={roleId} onChange={(e) => setRoleId(e.target.value)}>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="user-team">Équipe</Label>
-            <Select id="user-team" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-              <option value="">—</option>
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          Annuler
-        </Button>
-        <Button
-          size="sm"
-          disabled={!name || !email || password.length < 10}
-          onClick={async () => {
-            try {
-              await api.post('/users', {
-                name,
-                email,
-                password,
-                roleIds: roleId ? [roleId] : [],
-                teamIds: teamId ? [teamId] : [],
-              });
-              onCreated();
-              onClose();
-            } catch (error) {
-              toast.push(error instanceof Error ? error.message : 'Échec', { tone: 'error' });
-            }
-          }}
-        >
-          Créer
-        </Button>
-      </div>
-    </Modal>
   );
 }
 
@@ -260,7 +167,7 @@ function RolesTab() {
       ? selected.permissions.filter((p) => p !== permissionKey)
       : [...selected.permissions, permissionKey];
     try {
-      await api.patch(`/roles/${selected.id}`, { permissions: next });
+      await updateRolePermissions(selected.id, next);
       void qc.invalidateQueries({ queryKey: ['roles'] });
     } catch (error) {
       toast.push(error instanceof Error ? error.message : 'Échec', { tone: 'error' });
@@ -376,7 +283,7 @@ function StatusesTab() {
               type="color"
               value={status.color}
               onChange={async (e) => {
-                await api.patch(`/statuses/${status.id}`, { color: e.target.value });
+                await updateStatus(status.id, { color: e.target.value });
                 void refresh();
               }}
               className="h-6 w-6 cursor-pointer rounded border border-border bg-transparent"
@@ -387,7 +294,7 @@ function StatusesTab() {
               defaultValue={status.name}
               onBlur={async (e) => {
                 if (e.target.value === status.name) return;
-                await api.patch(`/statuses/${status.id}`, { name: e.target.value });
+                await updateStatus(status.id, { name: e.target.value });
                 void refresh();
               }}
             />
@@ -397,7 +304,7 @@ function StatusesTab() {
                 type="checkbox"
                 checked={status.isDefault}
                 onChange={async () => {
-                  await api.patch(`/statuses/${status.id}`, { isDefault: true });
+                  await updateStatus(status.id, { isDefault: true });
                   void refresh();
                 }}
               />
@@ -408,7 +315,7 @@ function StatusesTab() {
                 type="checkbox"
                 checked={status.isFinal}
                 onChange={async (e) => {
-                  await api.patch(`/statuses/${status.id}`, { isFinal: e.target.checked });
+                  await updateStatus(status.id, { isFinal: e.target.checked });
                   void refresh();
                 }}
               />
@@ -419,7 +326,7 @@ function StatusesTab() {
               size="sm"
               onClick={async () => {
                 try {
-                  await api.delete(`/statuses/${status.id}`);
+                  await archiveStatus(status.id);
                   void refresh();
                 } catch (error) {
                   toast.push(error instanceof Error ? error.message : 'Échec', { tone: 'error' });
@@ -467,7 +374,7 @@ function StatusesTab() {
               disabled={!key || !name}
               onClick={async () => {
                 try {
-                  await api.post('/statuses', {
+                  await createStatus({
                     key,
                     name,
                     color,

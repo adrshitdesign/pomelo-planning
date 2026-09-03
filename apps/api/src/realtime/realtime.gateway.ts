@@ -29,7 +29,10 @@ export type RealtimeEvent =
 @WebSocketGateway({
   namespace: '/realtime',
   cors: {
-    origin: (process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(',').map((o) => o.trim()),
+    origin: [
+      ...(process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(',').map((o) => o.trim()),
+      ...(process.env.RENDER_EXTERNAL_URL ? [process.env.RENDER_EXTERNAL_URL] : []),
+    ],
     credentials: true,
   },
 })

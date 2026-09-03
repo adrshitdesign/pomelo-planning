@@ -1,25 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import type {
-  AuditEntry,
-  Client,
-  Notification,
-  PlanningPayload,
-  PlanningEvent,
-  ProjectObject,
-  Permission,
-  Role,
-  Status,
-  Team,
-  Ticket,
-  User,
-} from '@/lib/types';
+import * as data from '@/lib/data';
+import type { PlanningPayload, Ticket } from '@/lib/types';
+
+export type { PlanningParams, TicketFilters, MoveInput } from '@/lib/data';
 
 export const keys = {
   planning: (params: Record<string, unknown>) => ['planning', params] as const,
   tickets: (params: Record<string, unknown>) => ['tickets', params] as const,
   ticket: (id: string) => ['ticket', id] as const,
-  events: (params: Record<string, unknown>) => ['events', params] as const,
   users: () => ['users'] as const,
   teams: () => ['teams'] as const,
   clients: () => ['clients'] as const,
@@ -34,65 +22,41 @@ export const keys = {
 // --- Référentiels ----------------------------------------------------------
 
 export const useStatuses = () =>
-  useQuery({ queryKey: keys.statuses(), queryFn: () => api.get<Status[]>('/statuses'), staleTime: 300_000 });
+  useQuery({ queryKey: keys.statuses(), queryFn: data.fetchStatuses, staleTime: 300_000 });
 
 export const useUsers = () =>
-  useQuery({ queryKey: keys.users(), queryFn: () => api.get<User[]>('/users'), staleTime: 300_000 });
+  useQuery({ queryKey: keys.users(), queryFn: data.fetchUsers, staleTime: 300_000 });
 
 export const useTeams = () =>
-  useQuery({ queryKey: keys.teams(), queryFn: () => api.get<Team[]>('/teams'), staleTime: 300_000 });
+  useQuery({ queryKey: keys.teams(), queryFn: data.fetchTeams, staleTime: 300_000 });
 
-export const useClients = () =>
-  useQuery({ queryKey: keys.clients(), queryFn: () => api.get<Client[]>('/clients') });
+export const useClients = () => useQuery({ queryKey: keys.clients(), queryFn: data.fetchClients });
 
 export const useProjectObjects = () =>
-  useQuery({
-    queryKey: keys.projectObjects(),
-    queryFn: () => api.get<ProjectObject[]>('/project-objects'),
-    staleTime: 120_000,
-  });
+  useQuery({ queryKey: keys.projectObjects(), queryFn: data.fetchProjectObjects, staleTime: 120_000 });
 
-export const useRoles = () =>
-  useQuery({ queryKey: keys.roles(), queryFn: () => api.get<Role[]>('/roles') });
+export const useRoles = () => useQuery({ queryKey: keys.roles(), queryFn: data.fetchRoles });
 
 export const usePermissions = () =>
-  useQuery({ queryKey: keys.permissions(), queryFn: () => api.get<Permission[]>('/permissions') });
+  useQuery({ queryKey: keys.permissions(), queryFn: data.fetchPermissions, staleTime: 600_000 });
 
 // --- Planning --------------------------------------------------------------
 
-export interface PlanningParams {
-  from: string;
-  to: string;
-  teamId?: string;
-  userId?: string;
-  clientId?: string;
-  projectObjectId?: string;
-  [key: string]: string | undefined;
-}
-
-export const usePlanning = (params: PlanningParams) =>
+export const usePlanning = (params: data.PlanningParams) =>
   useQuery({
     queryKey: keys.planning(params),
-    queryFn: () => api.get<PlanningPayload>('/planning', params),
+    queryFn: () => data.fetchPlanning(params),
     placeholderData: (previous) => previous,
   });
 
-export interface MoveInput {
-  id: string;
-  startAt: string;
-  endAt: string;
-  assigneeId?: string;
-  previousAssigneeId?: string;
-}
-
 /**
- * Déplacement optimiste : la carte bouge immédiatement, l'API confirme ensuite.
- * En cas d'échec, TanStack Query restaure l'état précédent.
+ * Déplacement optimiste : la carte bouge immédiatement, la base confirme
+ * ensuite. En cas de refus, l'état précédent est restauré.
  */
-export function useMoveTicket(params: PlanningParams) {
+export function useMoveTicket(params: data.PlanningParams) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...body }: MoveInput) => api.patch<Ticket>(`/tickets/${id}/move`, body),
+    mutationFn: (input: data.MoveInput) => data.moveTicket(input),
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: keys.planning(params) });
       const previous = qc.getQueryData<PlanningPayload>(keys.planning(params));
@@ -110,7 +74,8 @@ export function useMoveTicket(params: PlanningParams) {
                   assignees: input.assigneeId
                     ? [
                         ...ticket.assignees.filter(
-                          (a) => a.userId !== input.previousAssigneeId && a.userId !== input.assigneeId,
+                          (a) =>
+                            a.userId !== input.previousAssigneeId && a.userId !== input.assigneeId,
                         ),
                         {
                           id: `optimistic-${input.assigneeId}`,
@@ -144,29 +109,17 @@ export function useMoveTicket(params: PlanningParams) {
 
 // --- Tickets ---------------------------------------------------------------
 
-export interface TicketFilters {
-  search?: string;
-  statusId?: string;
-  teamId?: string;
-  clientId?: string;
-  projectObjectId?: string;
-  assigneeId?: string;
-  priority?: string;
-  includeArchived?: boolean;
-  [key: string]: string | boolean | undefined;
-}
-
-export const useTickets = (filters: TicketFilters) =>
+export const useTickets = (filters: data.TicketFilters) =>
   useQuery({
     queryKey: keys.tickets(filters),
-    queryFn: () => api.get<{ items: Ticket[]; total: number }>('/tickets', filters),
+    queryFn: () => data.fetchTickets(filters),
     placeholderData: (previous) => previous,
   });
 
 export const useTicket = (id: string | null) =>
   useQuery({
     queryKey: keys.ticket(id ?? ''),
-    queryFn: () => api.get<Ticket>(`/tickets/${id}`),
+    queryFn: () => data.fetchTicket(id as string),
     enabled: Boolean(id),
   });
 
@@ -179,34 +132,28 @@ export function useTicketMutations() {
 
   return {
     create: useMutation({
-      mutationFn: (body: Record<string, unknown>) => api.post<Ticket>('/tickets', body),
+      mutationFn: (input: data.TicketInput) => data.createTicket(input),
       onSuccess: invalidate,
     }),
     update: useMutation({
-      mutationFn: ({ id, ...body }: { id: string } & Record<string, unknown>) =>
-        api.patch<Ticket>(`/tickets/${id}`, body),
-      onSuccess: (ticket) => {
+      mutationFn: ({ id, ...input }: { id: string } & data.TicketInput) =>
+        data.updateTicket(id, input),
+      onSuccess: (ticket: Ticket) => {
         qc.setQueryData(keys.ticket(ticket.id), ticket);
         invalidate();
       },
     }),
     duplicate: useMutation({
       mutationFn: ({ id, startAt }: { id: string; startAt?: string }) =>
-        api.post<Ticket>(`/tickets/${id}/duplicate`, { startAt }),
+        data.duplicateTicket(id, startAt),
       onSuccess: invalidate,
     }),
-    archive: useMutation({
-      mutationFn: (id: string) => api.delete(`/tickets/${id}`),
-      onSuccess: invalidate,
-    }),
-    restore: useMutation({
-      mutationFn: (id: string) => api.post(`/tickets/${id}/restore`),
-      onSuccess: invalidate,
-    }),
+    archive: useMutation({ mutationFn: data.archiveTicket, onSuccess: invalidate }),
+    restore: useMutation({ mutationFn: data.restoreTicket, onSuccess: invalidate }),
     comment: useMutation({
       mutationFn: ({ ticketId, body }: { ticketId: string; body: string }) =>
-        api.post(`/tickets/${ticketId}/comments`, { body }),
-      onSuccess: (_data, variables) => {
+        data.createComment(ticketId, body),
+      onSuccess: (_result, variables) => {
         void qc.invalidateQueries({ queryKey: keys.ticket(variables.ticketId) });
       },
     }),
@@ -223,18 +170,14 @@ export function useEventMutations() {
   };
   return {
     create: useMutation({
-      mutationFn: (body: Record<string, unknown>) => api.post<PlanningEvent>('/events', body),
+      mutationFn: (input: data.EventInput) => data.createEvent(input),
       onSuccess: invalidate,
     }),
     update: useMutation({
-      mutationFn: ({ id, ...body }: { id: string } & Record<string, unknown>) =>
-        api.patch<PlanningEvent>(`/events/${id}`, body),
+      mutationFn: ({ id, ...input }: { id: string } & data.EventInput) => data.updateEvent(id, input),
       onSuccess: invalidate,
     }),
-    archive: useMutation({
-      mutationFn: (id: string) => api.delete(`/events/${id}`),
-      onSuccess: invalidate,
-    }),
+    archive: useMutation({ mutationFn: data.archiveEvent, onSuccess: invalidate }),
   };
 }
 
@@ -243,13 +186,13 @@ export function useEventMutations() {
 export const useNotifications = () =>
   useQuery({
     queryKey: keys.notifications(),
-    queryFn: () => api.get<{ items: Notification[]; unread: number }>('/notifications'),
+    queryFn: data.fetchNotifications,
     refetchInterval: 120_000,
   });
 
 export const useAudit = (params: { entityType?: string; entityId?: string; take?: number }) =>
   useQuery({
     queryKey: keys.audit(params),
-    queryFn: () => api.get<{ items: AuditEntry[]; total: number }>('/audit', params),
+    queryFn: () => data.fetchAudit(params),
     enabled: Boolean(params.entityId) || Boolean(params.entityType),
   });

@@ -1,0 +1,66 @@
+name: Déployer sur GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # permet de relancer le déploiement à la main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un seul déploiement à la fois ; les suivants attendent.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm install --include=dev --no-audit --no-fund
+
+      - name: Compiler le site
+        working-directory: apps/web
+        env:
+          # Adresse et clé publique du projet Supabase, renseignées dans
+          # Settings → Secrets and variables → Actions → Variables.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          # GitHub Pages sert le site depuis /<nom-du-depot>/.
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ]; then
+            echo "::error::VITE_SUPABASE_URL n'est pas renseigné (Settings → Secrets and variables → Actions → Variables)."
+            exit 1
+          fi
+          npm run build
+
+      # Une application à une seule page : toute adresse inconnue doit
+      # renvoyer la page d'accueil. GitHub Pages utilise 404.html pour ça.
+      - name: Gérer les liens profonds
+        run: cp apps/web/dist/index.html apps/web/dist/404.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

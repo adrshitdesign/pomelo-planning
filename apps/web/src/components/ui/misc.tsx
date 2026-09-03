@@ -58,9 +58,7 @@ export function Avatar({
 }
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <div className={cn('rounded-lg border border-border bg-surface p-4', className)}>{children}</div>
-  );
+  return <div className={cn('panel p-4', className)}>{children}</div>;
 }
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {

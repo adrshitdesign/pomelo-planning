@@ -1,0 +1,35 @@
+POURQUOI CE DOSSIER
+===================
+
+Sur Mac, le Finder cache les fichiers dont le nom commence par un point.
+Ils sont pourtant indispensables au fonctionnement du projet.
+
+Ce dossier en contient une copie lisible, uniquement pour dépannage.
+Il n'a AUCUN rôle dans le fonctionnement de l'application : vous pouvez
+l'ignorer, et même le supprimer.
+
+QUAND S'EN SERVIR
+=================
+
+Seulement si vous repartez d'un dépôt GitHub vide. Dans ce cas, recréez
+chaque fichier sur GitHub avec « Add file > Create new file », en tapant
+le nom exact ci-dessous (les « -- » représentent les dossiers) et en
+collant le contenu du fichier .txt correspondant.
+
+  1--devcontainer--devcontainer.json.txt  ->  .devcontainer/devcontainer.json
+  2--devcontainer--docker-compose.yml.txt ->  .devcontainer/docker-compose.yml
+  3--devcontainer--setup.sh.txt           ->  .devcontainer/setup.sh
+  4--gitignore.txt                        ->  .gitignore
+  5--env.example.txt                      ->  .env.example
+  6--github--workflows--ci.yml.txt        ->  .github/workflows/ci.yml
+  7--github--workflows--deploy.yml.txt    ->  .github/workflows/deploy.yml
+
+Les trois premiers sont nécessaires pour lancer un Codespace.
+Le septième (deploy.yml) est INDISPENSABLE pour publier le site en ligne.
+Les autres sont du confort.
+
+RAPPEL POUR VOIR LES FICHIERS CACHÉS SUR MAC
+============================================
+
+Dans une fenêtre du Finder : Cmd + Maj + . (touche point).
+Le même raccourci les recache.

@@ -12,7 +12,15 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     margin: 0;
-    /* Interface flat : pas de dégradé ni d'ombre lourde (section 7). */
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'tnum' 0;
+    /* Interface flat : pas de dégradé ni d'ombre lourde. */
+  }
+
+  /* Chiffres alignés partout où l'on compare des valeurs. */
+  table,
+  time,
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 
   ::-webkit-scrollbar {
@@ -20,7 +28,15 @@
     height: 10px;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-muted rounded-full;
+    @apply rounded-full bg-muted;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 1px;
   }
 }
 
@@ -29,24 +45,36 @@
   .planning-item {
     @apply relative overflow-hidden rounded-md bg-surface text-xs;
     border: 1px solid hsl(var(--border));
+    transition:
+      border-color 120ms ease,
+      background-color 120ms ease;
+  }
+
+  .planning-item:hover {
+    border-color: hsl(var(--muted-foreground) / 0.35);
   }
 
   .planning-item--ticket {
-    border-left: 4px solid var(--item-color, hsl(var(--primary)));
+    border-left: 3px solid var(--item-color, hsl(var(--primary)));
   }
 
   .planning-item--event {
-    border-left: 4px dashed var(--item-color, hsl(var(--accent)));
+    border-left: 3px dashed var(--item-color, hsl(var(--accent)));
     background-image: repeating-linear-gradient(
       45deg,
       transparent,
-      transparent 6px,
-      hsl(var(--surface-muted)) 6px,
-      hsl(var(--surface-muted)) 7px
+      transparent 7px,
+      hsl(var(--surface-muted)) 7px,
+      hsl(var(--surface-muted)) 8px
     );
   }
 
-  .planning-grid-line {
-    border-color: hsl(var(--planning-grid));
+  /* Bandeau de section : titres de colonnes, en-têtes de tableaux. */
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+
+  .panel {
+    @apply rounded-lg border border-border bg-surface;
   }
 }

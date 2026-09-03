@@ -22,9 +22,11 @@ async function bootstrap() {
   app.use(cookieParser());
   app.setGlobalPrefix('api');
 
-  const origins = (process.env.CORS_ORIGINS ?? 'http://localhost:5173')
-    .split(',')
-    .map((o) => o.trim());
+  // L'adresse publique fournie par l'hébergeur est toujours autorisée.
+  const origins = [
+    ...(process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(',').map((o) => o.trim()),
+    ...(process.env.RENDER_EXTERNAL_URL ? [process.env.RENDER_EXTERNAL_URL] : []),
+  ].filter(Boolean);
   app.enableCors({ origin: origins, credentials: true });
 
   // Validation systématique côté serveur (brief section 11).

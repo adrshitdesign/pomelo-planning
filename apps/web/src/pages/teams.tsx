@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { api } from '@/lib/api';
+import { fetchPlanning } from '@/lib/data';
 import { Avatar, Card, EmptyState, Spinner } from '@/components/ui/misc';
 import { useTeams } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
-import type { PlanningPayload, Team, UserSummary } from '@/lib/types';
+import type { Team, UserSummary } from '@/lib/types';
 
 interface TeamWithMembers extends Team {
   memberships: { id: string; isLead: boolean; user: UserSummary }[];
@@ -28,7 +28,7 @@ export function TeamsPage() {
 
   const planning = useQuery({
     queryKey: ['team-planning', selected?.id, range],
-    queryFn: () => api.get<PlanningPayload>('/planning', { ...range, teamId: selected?.id }),
+    queryFn: () => fetchPlanning({ ...range, teamId: selected?.id }),
     enabled: Boolean(selected?.id),
   });
 

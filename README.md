@@ -91,12 +91,16 @@ les permissions une à une.
 
 ## Interactions du planning
 
+La vue **Jour** est une frise horizontale (une ligne par personne, heures en
+abscisse, charge par heure) ; les vues **Semaine** et **Mois** sont des grilles.
+Les gestes ci-dessous valent dans toutes les vues.
+
 | Geste | Effet |
 |---|---|
 | Glisser une carte | Déplace la tâche (jour + heure, accroche 30 min) |
 | Glisser vers la ligne d'une autre personne | Réassigne la tâche |
 | Tirer le bord bas | Change la durée |
-| Ctrl/Cmd + glisser | Duplique la tâche |
+| Alt (⌥) / Ctrl / Cmd + glisser | Duplique la tâche — la touche peut être enfoncée avant ou pendant le glisser, un bandeau « Copie » le confirme |
 | Clic sur une case vide | Formulaire de création rapide (+ « Détail complet ») |
 | Clic droit sur une carte | Dupliquer, changer le statut, assigner, historique, archiver |
 | Double-clic | Ouvre le panneau latéral de détail |

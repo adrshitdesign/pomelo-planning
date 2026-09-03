@@ -215,8 +215,8 @@ export function PlanningPage() {
 
       <div className="flex items-center justify-between px-4 py-1 text-[11px] text-muted-foreground">
         <span>
-          Glisser pour déplacer · bord bas pour la durée · Ctrl+glisser pour dupliquer · N nouvelle
-          tâche · T aujourd'hui · Ctrl+Z annuler
+          Glisser pour déplacer · bord bas pour la durée · ⌥ Alt (ou Ctrl) + glisser pour dupliquer ·
+          N nouvelle tâche · T aujourd'hui · Ctrl+Z annuler
         </span>
         <SyncIndicator state={syncState} />
       </div>

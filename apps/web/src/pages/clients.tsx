@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Building2, ChevronRight, Plus } from 'lucide-react';
-import { api } from '@/lib/api';
+import { createClient, createProjectObject } from '@/lib/data';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
@@ -244,7 +244,7 @@ function CreateClientModal({
           size="sm"
           disabled={!name.trim()}
           onClick={async () => {
-            await api.post('/clients', {
+            await createClient({
               name: name.trim(),
               contactName: contactName || undefined,
               email: email || undefined,
@@ -300,7 +300,7 @@ function CreateObjectModal({
           size="sm"
           disabled={!name.trim()}
           onClick={async () => {
-            await api.post('/project-objects', {
+            await createProjectObject({
               clientId,
               name: name.trim(),
               reference: reference || undefined,

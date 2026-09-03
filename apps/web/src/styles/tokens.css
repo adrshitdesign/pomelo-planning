@@ -1,80 +1,98 @@
 /* ---------------------------------------------------------------------------
- * TOKENS DE COULEUR — POINT D'ENTRÉE UNIQUE DE LA CHARTE GRAPHIQUE
+ * TOKENS — POINT D'ENTRÉE UNIQUE DE LA CHARTE GRAPHIQUE
  *
- * Les valeurs ci-dessous sont des PLACEHOLDERS (teal / corail / ambre), comme
- * indiqué en section 7 du brief. Quand la charte Pomelo-Paradigm définitive
- * arrive, seules ces variables changent : aucun composant ne code une couleur
- * en dur. Format HSL sans `hsl()` pour que Tailwind puisse moduler l'opacité.
+ * Palette d'esprit Pomdoc : bleu marine institutionnel en couleur principale,
+ * corail « pomelo » en accent, neutres froids et sobres. Aucun composant ne
+ * code une couleur en dur : tout passe par ces variables.
+ *
+ * POUR CALER SUR LES VRAIS CODES DE LA CHARTE :
+ * ne toucher que les 6 lignes marquées ★ ci-dessous (format HSL sans hsl(),
+ * pour que Tailwind puisse jouer sur l'opacité). Convertisseur hex → HSL :
+ * n'importe quel outil en ligne, ou demande-moi la conversion.
  * ------------------------------------------------------------------------- */
 
 :root {
-  --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  --radius: 0.5rem;
+  --font-sans: 'Inter', 'SF Pro Text', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --radius: 0.375rem;
 
-  /* Fonds et textes */
-  --background: 210 20% 98%;
-  --foreground: 222 22% 16%;
-  --surface: 0 0% 100%;
-  --surface-muted: 210 20% 96%;
-  --muted: 214 20% 94%;
-  --muted-foreground: 215 16% 47%;
-  --border: 214 20% 89%;
-  --input: 214 20% 89%;
-  --ring: 174 62% 40%;
-
-  /* Couleur principale — placeholder teal */
-  --primary: 174 62% 40%;
+  /* ★ Couleur principale — bleu marine (#1D4E89) */
+  --primary: 213 65% 33%;
   --primary-foreground: 0 0% 100%;
-  --primary-soft: 174 55% 94%;
+  --primary-soft: 213 60% 95%;
+  --primary-hover: 213 65% 27%;
 
-  /* Couleur secondaire — placeholder corail */
-  --accent: 8 89% 70%;
+  /* ★ Accent — corail pomelo (#F2603C) */
+  --accent: 12 87% 59%;
   --accent-foreground: 0 0% 100%;
-  --accent-soft: 8 89% 96%;
+  --accent-soft: 12 90% 96%;
 
-  /* Couleur d'appui — placeholder ambre */
-  --highlight: 38 92% 50%;
-  --highlight-foreground: 26 40% 18%;
-  --highlight-soft: 38 92% 95%;
+  /* ★ Appui — bleu ciel pour l'information (#2CA5E0) */
+  --highlight: 199 76% 52%;
+  --highlight-foreground: 0 0% 100%;
+  --highlight-soft: 199 80% 96%;
+
+  /* ★ Fond général de l'application */
+  --background: 210 25% 97%;
+  /* ★ Fond des panneaux, cartes et tableaux */
+  --surface: 0 0% 100%;
+  /* ★ Couleur du texte principal */
+  --foreground: 215 30% 17%;
+
+  --surface-muted: 210 22% 95%;
+  --muted: 213 20% 93%;
+  --muted-foreground: 215 16% 45%;
+  --border: 214 22% 89%;
+  --input: 214 22% 86%;
+  --ring: 213 65% 45%;
+
+  /* Navigation latérale — bandeau sombre, repère fort de l'interface */
+  --sidebar: 214 45% 15%;
+  --sidebar-foreground: 210 30% 92%;
+  --sidebar-muted: 213 18% 62%;
+  --sidebar-active: 213 55% 24%;
+  --sidebar-border: 214 35% 22%;
 
   /* États */
-  --destructive: 0 72% 51%;
+  --destructive: 2 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --success: 142 71% 45%;
-  --warning: 38 92% 50%;
+  --success: 152 58% 38%;
+  --warning: 38 92% 48%;
 
   /* Planning */
-  --planning-grid: 214 20% 91%;
-  --planning-today: 174 55% 96%;
-  --planning-offhours: 210 20% 97%;
+  --planning-grid: 214 24% 91%;
+  --planning-today: 213 60% 97%;
+  --planning-offhours: 210 22% 96%;
+
+  /* Palette des catégories de tickets (bordure gauche colorée) */
+  --category-1: 213 65% 40%; /* marine */
+  --category-2: 12 87% 59%; /* corail */
+  --category-3: 199 76% 47%; /* ciel */
+  --category-4: 172 55% 36%; /* sarcelle */
+  --category-5: 265 45% 55%; /* violet */
+  --category-6: 38 85% 48%; /* ambre */
 }
 
 .dark {
-  --background: 222 24% 11%;
-  --foreground: 210 20% 96%;
-  --surface: 222 22% 15%;
-  --surface-muted: 222 20% 18%;
-  --muted: 222 18% 22%;
-  --muted-foreground: 215 16% 65%;
-  --border: 222 16% 26%;
-  --input: 222 16% 26%;
+  --background: 214 30% 10%;
+  --foreground: 210 25% 94%;
+  --surface: 214 27% 14%;
+  --surface-muted: 214 24% 17%;
+  --muted: 214 20% 21%;
+  --muted-foreground: 213 15% 65%;
+  --border: 214 20% 25%;
+  --input: 214 20% 28%;
 
-  --primary-soft: 174 40% 20%;
-  --accent-soft: 8 40% 22%;
-  --highlight-soft: 38 40% 22%;
+  --primary: 211 70% 58%;
+  --primary-soft: 213 40% 20%;
+  --primary-hover: 211 70% 64%;
+  --accent-soft: 12 45% 22%;
+  --highlight-soft: 199 45% 20%;
 
-  --planning-grid: 222 16% 24%;
-  --planning-today: 174 30% 18%;
-  --planning-offhours: 222 20% 13%;
-}
+  --sidebar: 214 35% 11%;
+  --sidebar-active: 213 45% 20%;
+  --sidebar-border: 214 25% 20%;
 
-/* Palette des catégories de tickets — bordure gauche pleine (section 7).
-   Les événements réutilisent les mêmes teintes mais en pointillés. */
-:root {
-  --category-1: 174 62% 40%;
-  --category-2: 8 89% 70%;
-  --category-3: 38 92% 50%;
-  --category-4: 199 89% 55%;
-  --category-5: 262 60% 62%;
-  --category-6: 142 60% 45%;
+  --planning-grid: 214 18% 23%;
+  --planning-today: 213 35% 17%;
+  --planning-offhours: 214 25% 12%;
 }

@@ -1,21 +1,11 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { connectRealtime, disconnectRealtime } from '@/lib/realtime';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/store/auth';
 
-const PLANNING_EVENTS = [
-  'ticket.created',
-  'ticket.updated',
-  'ticket.moved',
-  'ticket.archived',
-  'event.created',
-  'event.updated',
-  'event.archived',
-] as const;
-
 /**
- * Sync temps réel : à chaque événement serveur, on invalide les caches
- * concernés. Les déplacements faits localement restent optimistes.
+ * Synchronisation temps réel : la base pousse les changements, on rafraîchit
+ * les écrans concernés. Les déplacements faits localement restent optimistes.
  */
 export function useRealtimeSync() {
   const qc = useQueryClient();
@@ -24,24 +14,26 @@ export function useRealtimeSync() {
   useEffect(() => {
     if (status !== 'authenticated') return;
 
-    const socket = connectRealtime();
     const refreshPlanning = () => {
       void qc.invalidateQueries({ queryKey: ['planning'] });
       void qc.invalidateQueries({ queryKey: ['tickets'] });
-      void qc.invalidateQueries({ queryKey: ['events'] });
     };
 
-    PLANNING_EVENTS.forEach((event) => socket.on(event, refreshPlanning));
-    socket.on('comment.created', () => void qc.invalidateQueries({ queryKey: ['ticket'] }));
-    socket.on('notification.created', () =>
-      qc.invalidateQueries({ queryKey: ['notifications'] }),
-    );
+    const channel = supabase
+      .channel('planning-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, refreshPlanning)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ticket_assignees' }, refreshPlanning)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, refreshPlanning)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () =>
+        qc.invalidateQueries({ queryKey: ['ticket'] }),
+      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, () =>
+        qc.invalidateQueries({ queryKey: ['notifications'] }),
+      )
+      .subscribe();
 
     return () => {
-      PLANNING_EVENTS.forEach((event) => socket.off(event, refreshPlanning));
-      socket.off('comment.created');
-      socket.off('notification.created');
-      disconnectRealtime();
+      void supabase.removeChannel(channel);
     };
   }, [qc, status]);
 }

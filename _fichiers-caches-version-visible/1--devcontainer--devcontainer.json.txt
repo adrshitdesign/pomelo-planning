@@ -1,0 +1,19 @@
+{
+  "name": "Pomelo-Paradigm — Planning",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [5173, 3000],
+  "portsAttributes": {
+    "5173": { "label": "Application", "onAutoForward": "openPreview" },
+    "3000": { "label": "API", "onAutoForward": "silent" }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postAttachCommand": "npm run dev",
+  "customizations": {
+    "vscode": {
+      "extensions": ["Prisma.prisma", "esbenp.prettier-vscode"]
+    }
+  },
+  "remoteUser": "node"
+}

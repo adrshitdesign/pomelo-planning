@@ -42,7 +42,9 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <BrowserRouter>
+        {/* Le chemin de base change entre le développement (/) et GitHub
+            Pages (/nom-du-depot/) : Vite le fournit à la compilation. */}
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           <Routes>
             <Route
               path="/connexion"

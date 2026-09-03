@@ -15,10 +15,10 @@ export type PlanningView = 'day' | 'week' | 'month';
 export type GroupMode = 'person' | 'team' | 'company';
 
 /** Amplitude horaire affichée et granularité d'accroche. */
-export const DAY_START_HOUR = 7;
-export const DAY_END_HOUR = 20;
+export const DAY_START_HOUR = 8;
+export const DAY_END_HOUR = 19;
 export const SLOT_MINUTES = 30;
-export const SLOT_HEIGHT = 22; // px pour SLOT_MINUTES
+export const SLOT_HEIGHT = 16; // px pour SLOT_MINUTES — compact, pour voir plusieurs personnes
 export const SLOTS_PER_DAY = ((DAY_END_HOUR - DAY_START_HOUR) * 60) / SLOT_MINUTES;
 
 export interface PlanningRange {

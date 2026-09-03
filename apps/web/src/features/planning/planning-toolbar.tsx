@@ -62,7 +62,9 @@ export function PlanningToolbar({
   const title =
     view === 'month'
       ? format(anchor, 'MMMM yyyy', { locale: fr })
-      : format(anchor, "'Semaine du' d MMMM yyyy", { locale: fr });
+      : view === 'day'
+        ? format(anchor, 'EEEE d MMMM yyyy', { locale: fr })
+        : format(anchor, "'Semaine du' d MMMM yyyy", { locale: fr });
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-2">
@@ -78,7 +80,7 @@ export function PlanningToolbar({
         </Button>
       </div>
 
-      <p className="min-w-48 text-sm font-medium capitalize">{title}</p>
+      <p className="min-w-52 text-sm font-medium first-letter:uppercase">{title}</p>
 
       <div className="flex overflow-hidden rounded-md border border-border">
         {VIEWS.map((item) => (
@@ -112,7 +114,7 @@ export function PlanningToolbar({
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <Select
-          className="h-8 w-40"
+          className="h-8 w-44"
           value={filters.teamId ?? ''}
           onChange={(e) => onFiltersChange({ ...filters, teamId: e.target.value || undefined })}
           aria-label="Filtrer par équipe"
@@ -126,7 +128,7 @@ export function PlanningToolbar({
         </Select>
 
         <Select
-          className="h-8 w-40"
+          className="h-8 w-44"
           value={filters.userId ?? ''}
           onChange={(e) => onFiltersChange({ ...filters, userId: e.target.value || undefined })}
           aria-label="Filtrer par personne"
@@ -140,7 +142,7 @@ export function PlanningToolbar({
         </Select>
 
         <Select
-          className="h-8 w-40"
+          className="h-8 w-44"
           value={filters.clientId ?? ''}
           onChange={(e) => onFiltersChange({ ...filters, clientId: e.target.value || undefined })}
           aria-label="Filtrer par client"
