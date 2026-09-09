@@ -61,7 +61,7 @@ elle qui sera déployée.
 2. Laisser travailler 5 à 10 minutes : installation et préparation automatiques.
 3. Onglet **PORTS** en bas → ligne « Application » (port 5173) → icône de globe
    (« Ouvrir dans le navigateur »).
-4. Connexion : `admin@pomelo-paradigm.fr` / `Admin123!`
+4. Connexion : `admin@exemple.fr` / `Admin123!`
 
 Données de démonstration incluses (clients, tickets, événements fictifs).
 La fenêtre d'aperçu intégrée à l'éditeur (« Navigateur simple ») fonctionne mal :
@@ -104,7 +104,7 @@ seul en quelques minutes.
 
 ## Le premier compte
 
-- Codespaces : `admin@pomelo-paradigm.fr` / `Admin123!`, avec données de démo.
+- Codespaces : `admin@exemple.fr` / `Admin123!`, avec données de démo.
 - Render : les identifiants saisis à l'étape 3, base vide — tout se crée depuis
   l'écran Administration.
 

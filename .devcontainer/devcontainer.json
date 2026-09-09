@@ -1,5 +1,5 @@
 {
-  "name": "Pomelo-Paradigm — Planning",
+  "name": "Planning",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspace",

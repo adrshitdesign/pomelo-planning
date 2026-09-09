@@ -46,7 +46,7 @@ export function QuickCreateModal({
 
   // La liste des objets suit le client choisi.
   const objectChoices = clientId
-    ? projectObjects.filter((o) => o.clientId === clientId)
+    ? projectObjects.filter((o) => !o.clientId || o.clientId === clientId)
     : projectObjects;
 
   if (!context) return null;
@@ -199,7 +199,7 @@ export function QuickCreateModal({
                 setClient(e.target.value);
                 // Un objet d'un autre client n'a plus lieu d'être.
                 const current = projectObjects.find((o) => o.id === projectObjectId);
-                if (current && current.clientId !== e.target.value) setProjectObject('');
+                if (current?.clientId && current.clientId !== e.target.value) setProjectObject('');
               }}
             >
               <option value="">—</option>
@@ -214,7 +214,8 @@ export function QuickCreateModal({
 
         <div>
           <Label htmlFor="quick-object">
-            Objet <span className="font-normal text-muted-foreground">(facultatif)</span>
+            Type de mission{' '}
+            <span className="font-normal text-muted-foreground">(facultatif)</span>
           </Label>
           <Select
             id="quick-object"
@@ -222,7 +223,7 @@ export function QuickCreateModal({
             onChange={(e) => {
               setProjectObject(e.target.value);
               const object = projectObjects.find((o) => o.id === e.target.value);
-              if (object) setClient(object.clientId);
+              if (object?.clientId) setClient(object.clientId);
             }}
           >
             <option value="">—</option>

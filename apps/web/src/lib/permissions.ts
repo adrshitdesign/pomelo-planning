@@ -24,6 +24,8 @@ export const P = {
   USER_MANAGE: 'user:manage',
   ROLE_MANAGE: 'role:manage',
   STATUS_MANAGE: 'status:manage',
+  LABEL_VIEW: 'label:view',
+  LABEL_MANAGE: 'label:manage',
   AUDIT_VIEW: 'audit:view',
   DATA_EXPORT: 'data:export',
 } as const;

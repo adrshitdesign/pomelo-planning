@@ -9,7 +9,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from 'date-fns';
-import type { PlanningEvent, Ticket } from '@/lib/types';
+import type { PlanningEvent, Priority, Ticket } from '@/lib/types';
 
 export type PlanningView = 'day' | 'week' | 'month';
 export type GroupMode = 'person' | 'team' | 'company';
@@ -67,12 +67,24 @@ export interface PlanningItem {
   kind: 'ticket' | 'event';
   title: string;
   startAt: Date;
+  /**
+   * Fin **affichée**. Dès qu'un temps réel est saisi, c'est lui qui commande :
+   * une tâche prévue 4 h mais faite en 3 h n'occupe plus que 3 h au planning.
+   */
   endAt: Date;
+  /** Fin telle qu'elle était planifiée, gardée pour la comparer au réel. */
+  plannedEndAt: Date;
+  /** Vrai quand un temps réel a été saisi et diffère de la durée prévue. */
+  adjustedByActual: boolean;
   color: string;
   statusName?: string;
   statusColor?: string;
+  priority?: Priority;
+  labels: { id: string; name: string; color: string }[];
   assigneeIds: string[];
   teamIds: string[];
+  clientId?: string;
+  projectObjectId?: string;
   subtitle?: string;
   raw: Ticket | PlanningEvent;
 }
@@ -90,26 +102,40 @@ export function toItems(tickets: Ticket[], events: PlanningEvent[]): PlanningIte
 
   for (const ticket of tickets) {
     if (!ticket.startAt || !ticket.endAt) continue;
+    const startAt = new Date(ticket.startAt);
+    const plannedEndAt = new Date(ticket.endAt);
+    // Le temps réel, une fois saisi, remplace la durée prévue à l'écran.
+    const actualEndAt =
+      ticket.actualMinutes && ticket.actualMinutes > 0
+        ? addMinutes(startAt, ticket.actualMinutes)
+        : null;
+
     items.push({
       id: ticket.id,
       kind: 'ticket',
       title: ticket.title,
-      startAt: new Date(ticket.startAt),
-      endAt: new Date(ticket.endAt),
-      // Couleur de catégorie : couleur propre > objet > client > équipe.
+      startAt,
+      endAt: actualEndAt ?? plannedEndAt,
+      plannedEndAt,
+      adjustedByActual: Boolean(actualEndAt) && actualEndAt!.getTime() !== plannedEndAt.getTime(),
+      // Couleur de catégorie : étiquette > couleur propre > mission > client > équipe.
       color:
+        ticket.labels?.[0]?.color ??
         ticket.color ??
         ticket.projectObject?.color ??
-        ticket.projectObject?.client.color ??
+        ticket.client?.color ??
         ticket.team?.color ??
         'hsl(var(--primary))',
       statusName: ticket.status?.name,
       statusColor: ticket.status?.color,
+      priority: ticket.priority,
+      labels: ticket.labels ?? [],
       assigneeIds: ticket.assignees.map((a) => a.userId),
       teamIds: ticket.teamId ? [ticket.teamId] : [],
-      subtitle: ticket.projectObject
-        ? `${ticket.projectObject.client.name} · ${ticket.projectObject.name}`
-        : undefined,
+      clientId: ticket.clientId ?? undefined,
+      projectObjectId: ticket.projectObjectId ?? undefined,
+      subtitle:
+        [ticket.client?.name, ticket.projectObject?.name].filter(Boolean).join(' · ') || undefined,
       raw: ticket,
     });
   }
@@ -121,9 +147,13 @@ export function toItems(tickets: Ticket[], events: PlanningEvent[]): PlanningIte
       title: event.title,
       startAt: new Date(event.startAt),
       endAt: new Date(event.endAt),
+      plannedEndAt: new Date(event.endAt),
+      adjustedByActual: false,
       color: event.color ?? EVENT_TYPE_COLORS[event.type] ?? 'hsl(var(--accent))',
+      labels: [],
       assigneeIds: event.participants.map((p) => p.userId),
       teamIds: event.teamId ? [event.teamId] : [],
+      clientId: event.clientId ?? undefined,
       subtitle: event.location ?? undefined,
       raw: event,
     });

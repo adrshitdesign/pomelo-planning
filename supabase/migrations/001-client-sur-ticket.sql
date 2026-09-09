@@ -45,8 +45,11 @@ begin
     from public.project_objects
     where id = new.project_object_id;
 
-    -- L'objet fait foi : il porte toujours son client.
-    new.client_id := object_client;
+    -- Un type de mission réservé à un client impose ce client. Un type commun
+    -- (sans client) ne touche pas au client choisi sur le ticket.
+    if object_client is not null then
+      new.client_id := object_client;
+    end if;
   end if;
   return new;
 end;

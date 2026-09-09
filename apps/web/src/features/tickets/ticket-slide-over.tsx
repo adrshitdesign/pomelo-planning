@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Label, Select, Textarea } from '@/components/ui/input';
 import { Avatar, Badge, Spinner } from '@/components/ui/misc';
 import { PRIORITY_LABELS, formatDuration } from '@/lib/utils';
-import { useAudit, useTicket, useTicketMutations } from '@/hooks/queries';
+import { useAudit, useLabels, useTicket, useTicketMutations } from '@/hooks/queries';
 import { useAuth } from '@/store/auth';
 import { P } from '@/lib/permissions';
 import type { Client, ProjectObject, Status, Team, User } from '@/lib/types';
@@ -34,6 +34,7 @@ export function TicketSlideOver({
 }) {
   const { can, user } = useAuth();
   const { data: ticket, isLoading } = useTicket(ticketId);
+  const labels = useLabels();
   const mutations = useTicketMutations();
   const [tab, setTab] = useState<'detail' | 'comments' | 'history'>('detail');
   const [comment, setComment] = useState('');
@@ -41,9 +42,10 @@ export function TicketSlideOver({
 
   const canEdit = can(P.TICKET_UPDATE);
 
-  // Quand un client est choisi, la liste des objets se restreint aux siens.
+  // Types de mission proposés : ceux communs à tous, plus ceux réservés au
+  // client choisi.
   const objectChoices = ticket?.clientId
-    ? projectObjects.filter((o) => o.clientId === ticket.clientId)
+    ? projectObjects.filter((o) => !o.clientId || o.clientId === ticket.clientId)
     : projectObjects;
 
   useEffect(() => setTab('detail'), [ticketId]);
@@ -259,7 +261,9 @@ export function TicketSlideOver({
                       // Un objet déjà choisi qui appartient à un autre client
                       // n'a plus de sens : on le détache.
                       const current = projectObjects.find((o) => o.id === ticket.projectObjectId);
-                      const keepObject = Boolean(current) && current!.clientId === clientId;
+                      // Un type commun reste valable quel que soit le client.
+                      const keepObject =
+                        Boolean(current) && (!current!.clientId || current!.clientId === clientId);
                       patch({
                         clientId: clientId || '',
                         projectObjectId: keepObject ? undefined : '',
@@ -278,7 +282,8 @@ export function TicketSlideOver({
 
               <div>
                 <Label htmlFor="ticket-object">
-                  Objet <span className="font-normal text-muted-foreground">(facultatif)</span>
+                  Type de mission{' '}
+                  <span className="font-normal text-muted-foreground">(facultatif)</span>
                 </Label>
                 <Select
                   id="ticket-object"
@@ -289,8 +294,8 @@ export function TicketSlideOver({
                     const object = projectObjects.find((o) => o.id === objectId);
                     patch({
                       projectObjectId: objectId || '',
-                      // L'objet porte son client : on le recopie sur le ticket.
-                      ...(object ? { clientId: object.clientId } : {}),
+                      // Un type réservé à un client impose ce client.
+                      ...(object?.clientId ? { clientId: object.clientId } : {}),
                     });
                   }}
                 >
@@ -302,11 +307,52 @@ export function TicketSlideOver({
                     </option>
                   ))}
                 </Select>
-                {ticket.clientId && objectChoices.length === 0 && (
+                {objectChoices.length === 0 && (
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    Aucun objet pour ce client. On peut en créer depuis l'écran Clients.
+                    Aucun type de mission défini — Administration → Types de mission.
                   </p>
                 )}
+              </div>
+
+              <div>
+                <Label>Étiquettes</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {(labels.data ?? []).map((label) => {
+                    const active = ticket.labels.some((l) => l.id === label.id);
+                    return (
+                      <button
+                        key={label.id}
+                        type="button"
+                        disabled={!canEdit}
+                        title={label.description ?? undefined}
+                        onClick={() =>
+                          patch({
+                            labelIds: active
+                              ? ticket.labels.filter((l) => l.id !== label.id).map((l) => l.id)
+                              : [...ticket.labels.map((l) => l.id), label.id],
+                          })
+                        }
+                        className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+                          active
+                            ? 'border-transparent text-white'
+                            : 'border-border text-muted-foreground hover:bg-surface-muted'
+                        } ${canEdit ? '' : 'cursor-default opacity-70'}`}
+                        style={active ? { backgroundColor: label.color } : undefined}
+                      >
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: active ? 'rgba(255,255,255,.85)' : label.color }}
+                        />
+                        {label.name}
+                      </button>
+                    );
+                  })}
+                  {(labels.data ?? []).length === 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      Aucune étiquette définie — Administration → Étiquettes.
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -371,6 +417,9 @@ export function TicketSlideOver({
                 <span>Créé par {ticket.creator.name}</span>
                 <span>Estimé : {formatDuration(ticket.estimatedMinutes)}</span>
                 <span>Réel : {formatDuration(ticket.actualMinutes)}</span>
+                {ticket.actualMinutes ? (
+                  <span className="text-primary">Le planning affiche la durée réelle</span>
+                ) : null}
               </div>
             </div>
           )}

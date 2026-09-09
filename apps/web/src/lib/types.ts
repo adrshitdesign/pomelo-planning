@@ -56,13 +56,22 @@ export interface Client {
 
 export interface ProjectObject {
   id: string;
-  clientId: string;
+  /** Vide = type de mission commun, proposé pour tous les clients. */
+  clientId: string | null;
   name: string;
   reference?: string | null;
   description?: string | null;
   color: string;
   client?: { id: string; name: string; color: string };
   _count?: { tickets: number; events: number };
+}
+
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+  description?: string | null;
+  position: number;
 }
 
 export interface TicketAssignee {
@@ -93,10 +102,13 @@ export interface Ticket {
   client: { id: string; name: string; color: string } | null;
   projectObjectId: string | null;
   projectObject:
-    | (Pick<ProjectObject, 'id' | 'name' | 'color'> & { client: { id: string; name: string; color: string } })
+    | (Pick<ProjectObject, 'id' | 'name' | 'color'> & {
+        client: { id: string; name: string; color: string } | null;
+      })
     | null;
   creator: UserSummary;
   assignees: TicketAssignee[];
+  labels: Label[];
   archivedAt: string | null;
   comments?: Comment[];
   _count?: { comments: number };

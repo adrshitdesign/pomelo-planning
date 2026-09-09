@@ -30,7 +30,9 @@ insert into public.permissions (key, description) values
   ('role:manage',            'Gérer les rôles et permissions'),
   ('status:manage',          'Gérer les statuts personnalisés'),
   ('audit:view',             'Consulter le journal d''audit'),
-  ('data:export',            'Exporter les données')
+  ('data:export',            'Exporter les données'),
+  ('label:view',             'Consulter les étiquettes'),
+  ('label:manage',           'Créer et modifier les étiquettes')
 on conflict (key) do update set description = excluded.description;
 
 insert into public.roles (key, name, description, is_system) values
@@ -45,7 +47,8 @@ select r.id, p.key
 from public.roles r, public.permissions p
 where r.key = 'reader'
   and p.key in ('planning:view', 'ticket:view', 'event:view', 'comment:view',
-                'client:view', 'project_object:view', 'team:view', 'user:view')
+                'client:view', 'project_object:view', 'team:view', 'user:view',
+                'label:view')
 on conflict do nothing;
 
 -- Éditeur : lecture + production.
@@ -56,8 +59,9 @@ where r.key = 'editor'
   and p.key in ('planning:view', 'planning:move', 'ticket:view', 'ticket:create',
                 'ticket:update', 'ticket:archive', 'ticket:assign', 'event:view',
                 'event:create', 'event:update', 'event:archive', 'comment:view',
-                'comment:create', 'client:view', 'project_object:view',
-                'team:view', 'user:view')
+                'comment:create', 'client:view', 'client:manage',
+                'project_object:view', 'project_object:manage',
+                'label:view', 'label:manage', 'team:view', 'user:view')
 on conflict do nothing;
 
 -- Administrateur : tout.
@@ -83,3 +87,20 @@ insert into public.teams (name, color) values
   ('Développement', '#2CA5E0'),
   ('Commercial',    '#F59E0B')
 on conflict (name) do nothing;
+
+-- Étiquettes de départ (modifiables depuis Administration).
+insert into public.labels (name, color, description, position) values
+  ('Urgent client',  '#EF4444', 'Demande à traiter en priorité absolue',       0),
+  ('Relecture',      '#F59E0B', 'En attente d''une relecture ou d''un retour', 1),
+  ('À refacturer',   '#7C3AED', 'Temps à refacturer au client',                2),
+  ('Interne',        '#64748B', 'Travail interne, non facturable',             3)
+on conflict (name) do nothing;
+
+-- Types de mission de départ, communs à tous les clients.
+insert into public.project_objects (client_id, name, color) values
+  (null, 'Calage',                 '#1D4E89'),
+  (null, 'Montage',                '#2CA5E0'),
+  (null, 'Contrôle des livrables', '#2F9E68'),
+  (null, 'Corrections',            '#F59E0B'),
+  (null, 'Exécution',              '#7C3AED')
+on conflict do nothing;

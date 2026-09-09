@@ -11,6 +11,7 @@ import type {
   AuditEntry,
   Client,
   Comment,
+  Label,
   Notification,
   Permission,
   PlanningEvent,
@@ -35,7 +36,8 @@ const TICKET_SELECT = `
   creator:profiles!tickets_creator_id_fkey(id, name, avatar_url),
   client:clients(id, name, color),
   project_object:project_objects(id, name, color, client:clients(id, name, color)),
-  assignees:ticket_assignees(id, user_id, start_at, end_at, user:profiles(id, name, avatar_url))
+  assignees:ticket_assignees(id, user_id, start_at, end_at, user:profiles(id, name, avatar_url)),
+  ticket_labels(label:labels(id, name, color, description, position))
 `;
 
 const EVENT_SELECT = `
@@ -100,6 +102,10 @@ function mapTicket(row: Row): Ticket {
       endAt: a.end_at ?? null,
       user: person(a.user) ?? { id: a.user_id, name: '—', avatarUrl: null },
     })),
+    labels: (row.ticket_labels ?? [])
+      .map((l: Row) => l.label)
+      .filter(Boolean)
+      .sort((a: Row, b: Row) => (a.position ?? 0) - (b.position ?? 0)),
     archivedAt: row.archived_at ?? null,
   } as Ticket;
 }
@@ -147,7 +153,7 @@ function mapUser(row: Row): User {
 function mapObject(row: Row): ProjectObject {
   return {
     id: row.id,
-    clientId: row.client_id,
+    clientId: row.client_id ?? null,
     name: row.name,
     reference: row.reference ?? null,
     description: row.description ?? null,
@@ -229,7 +235,10 @@ export async function fetchProjectObjects(): Promise<ProjectObject[]> {
       .is('archived_at', null)
       .order('name', { ascending: true }),
   );
-  return rows.map(mapObject);
+  // Les types de mission communs d'abord, puis ceux réservés à un client.
+  return rows
+    .map(mapObject)
+    .sort((a, b) => Number(Boolean(a.clientId)) - Number(Boolean(b.clientId)));
 }
 
 export async function fetchRoles(): Promise<Role[]> {
@@ -406,6 +415,7 @@ export interface TicketInput {
   clientId?: string;
   projectObjectId?: string;
   assignees?: { userId: string; startAt?: string; endAt?: string }[];
+  labelIds?: string[];
 }
 
 /** Traduction camelCase → colonnes, en ignorant ce qui n'est pas fourni. */
@@ -479,6 +489,7 @@ export async function createTicket(input: TicketInput): Promise<Ticket> {
   );
 
   await replaceAssignees(row.id, input.assignees);
+  await replaceLabels(row.id, input.labelIds);
   return fetchTicket(row.id);
 }
 
@@ -488,6 +499,7 @@ export async function updateTicket(id: string, input: TicketInput): Promise<Tick
     unwrap(await supabase.from('tickets').update(columns).eq('id', id).select('id'));
   }
   await replaceAssignees(id, input.assignees);
+  await replaceLabels(id, input.labelIds);
   return fetchTicket(id);
 }
 
@@ -571,6 +583,7 @@ export async function duplicateTicket(id: string, startAt?: string): Promise<Tic
     teamId: source.teamId ?? undefined,
     clientId: source.clientId ?? undefined,
     projectObjectId: source.projectObjectId ?? undefined,
+    labelIds: source.labels.map((l) => l.id),
     assignees: source.assignees.map((a) => ({
       userId: a.userId,
       startAt: a.startAt ? newStart : undefined,
@@ -881,14 +894,113 @@ export async function createClient(input: {
 }
 
 export async function createProjectObject(input: {
-  clientId: string;
+  /** Vide = type de mission commun à tous les clients. */
+  clientId?: string | null;
   name: string;
   reference?: string;
+  color?: string;
 }): Promise<void> {
   unwrap(
     await supabase
       .from('project_objects')
-      .insert({ client_id: input.clientId, name: input.name, reference: input.reference ?? null })
+      .insert({
+        client_id: input.clientId || null,
+        name: input.name,
+        reference: input.reference ?? null,
+        ...(input.color ? { color: input.color } : {}),
+      })
       .select('id'),
+  );
+}
+
+export async function updateProjectObject(
+  id: string,
+  input: { name?: string; color?: string; clientId?: string | null },
+): Promise<void> {
+  const row: Row = {};
+  if (input.name !== undefined) row.name = input.name;
+  if (input.color !== undefined) row.color = input.color;
+  if (input.clientId !== undefined) row.client_id = input.clientId || null;
+  if (Object.keys(row).length === 0) return;
+  unwrap(await supabase.from('project_objects').update(row).eq('id', id).select('id'));
+}
+
+export async function archiveProjectObject(id: string): Promise<void> {
+  unwrap(
+    await supabase
+      .from('project_objects')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id'),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Étiquettes
+// ---------------------------------------------------------------------------
+
+export async function fetchLabels(): Promise<Label[]> {
+  const rows = unwrap<Row[]>(
+    await supabase
+      .from('labels')
+      .select('id, name, color, description, position')
+      .is('archived_at', null)
+      .order('position', { ascending: true })
+      .order('name', { ascending: true }),
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    color: row.color,
+    description: row.description ?? null,
+    position: row.position ?? 0,
+  }));
+}
+
+export async function createLabel(input: {
+  name: string;
+  color: string;
+  description?: string;
+}): Promise<void> {
+  unwrap(
+    await supabase
+      .from('labels')
+      .insert({ name: input.name, color: input.color, description: input.description ?? null })
+      .select('id'),
+  );
+}
+
+export async function updateLabel(
+  id: string,
+  input: { name?: string; color?: string; description?: string },
+): Promise<void> {
+  const row: Row = {};
+  if (input.name !== undefined) row.name = input.name;
+  if (input.color !== undefined) row.color = input.color;
+  if (input.description !== undefined) row.description = input.description;
+  if (Object.keys(row).length === 0) return;
+  unwrap(await supabase.from('labels').update(row).eq('id', id).select('id'));
+}
+
+export async function archiveLabel(id: string): Promise<void> {
+  unwrap(
+    await supabase
+      .from('labels')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id'),
+  );
+}
+
+/** Remplace la liste des étiquettes d'un ticket. */
+async function replaceLabels(ticketId: string, labelIds: string[] | undefined) {
+  if (!labelIds) return;
+  unwrap(await supabase.from('ticket_labels').delete().eq('ticket_id', ticketId).select('ticket_id'));
+  if (labelIds.length === 0) return;
+  unwrap(
+    await supabase
+      .from('ticket_labels')
+      .insert(labelIds.map((labelId) => ({ ticket_id: ticketId, label_id: labelId })))
+      .select('ticket_id'),
   );
 }

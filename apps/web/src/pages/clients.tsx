@@ -80,11 +80,11 @@ export function ClientsPage() {
         ))}
       </div>
 
-      {/* Colonne 2 : objets */}
+      {/* Colonne 2 : missions propres au client */}
       <div className="w-72 shrink-0 overflow-y-auto border-r border-border bg-surface">
         <div className="flex items-center justify-between px-3 py-2">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Objets
+            Missions du client
           </h2>
           {can(P.PROJECT_OBJECT_MANAGE) && selectedClient && (
             <Button variant="ghost" size="icon" onClick={() => setNewObject(true)} title="Ajouter">
@@ -93,7 +93,10 @@ export function ClientsPage() {
           )}
         </div>
         {objects.length === 0 && (
-          <p className="px-3 py-2 text-xs text-muted-foreground">Aucun objet pour ce client.</p>
+          <p className="px-3 py-2 text-xs text-muted-foreground">
+            Aucune mission propre à ce client. Les types communs (calage, montage…) se gèrent dans
+            Administration.
+          </p>
         )}
         {objects.map((object) => (
           <button
@@ -277,7 +280,7 @@ function CreateObjectModal({
 
   if (!open || !clientId) return null;
   return (
-    <Modal open onOpenChange={(o) => !o && onClose()} title="Nouvel objet">
+    <Modal open onOpenChange={(o) => !o && onClose()} title="Mission réservée à ce client">
       <div className="space-y-3">
         <div>
           <Label htmlFor="object-name">Nom</Label>

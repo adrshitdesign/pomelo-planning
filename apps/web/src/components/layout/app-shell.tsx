@@ -20,16 +20,23 @@ interface NavItem {
   to: string;
   label: string;
   icon: typeof Calendar;
-  permission?: PermissionKey;
+  /** Une seule de ces permissions suffit à faire apparaître l'entrée. */
+  permission?: PermissionKey | PermissionKey[];
 }
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/planning', label: 'Planning', icon: Calendar, permission: P.PLANNING_VIEW },
   { to: '/tickets', label: 'Tickets', icon: KanbanSquare, permission: P.TICKET_VIEW },
-  { to: '/clients', label: 'Clients & objets', icon: Building2, permission: P.CLIENT_VIEW },
+  { to: '/clients', label: 'Clients', icon: Building2, permission: P.CLIENT_VIEW },
   { to: '/equipes', label: 'Équipes', icon: Users, permission: P.TEAM_VIEW },
   { to: '/tableau-de-bord', label: 'Tableau de bord', icon: LayoutDashboard },
-  { to: '/administration', label: 'Administration', icon: Settings, permission: P.USER_MANAGE },
+  {
+    to: '/administration',
+    label: 'Administration',
+    icon: Settings,
+    // Les éditeurs y accèdent aussi, pour les types de mission et les étiquettes.
+    permission: [P.USER_MANAGE, P.PROJECT_OBJECT_MANAGE, P.LABEL_MANAGE],
+  },
 ];
 
 export function AppShell() {
@@ -38,7 +45,11 @@ export function AppShell() {
   const location = useLocation();
   useRealtimeSync();
 
-  const visibleItems = NAV_ITEMS.filter((item) => !item.permission || can(item.permission));
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (!item.permission) return true;
+    const needed = Array.isArray(item.permission) ? item.permission : [item.permission];
+    return needed.some((permission) => can(permission));
+  });
   const current = visibleItems.find((item) => location.pathname.startsWith(item.to));
 
   return (
@@ -47,11 +58,11 @@ export function AppShell() {
       <aside className="flex w-56 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
         <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-4">
           <span className="flex h-8 w-8 items-center justify-center rounded bg-accent text-[13px] font-bold text-accent-foreground">
-            PP
+            PL
           </span>
           <div className="leading-tight">
-            <p className="text-[13px] font-semibold tracking-tight">Pomelo-Paradigm</p>
-            <p className="text-[11px] text-sidebar-muted">Planning &amp; tickets</p>
+            <p className="text-[13px] font-semibold tracking-tight">Planning</p>
+            <p className="text-[11px] text-sidebar-muted">Missions &amp; tickets</p>
           </div>
         </div>
 
@@ -104,7 +115,7 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
-          <h1 className="text-sm font-semibold">{current?.label ?? 'Pomelo-Paradigm'}</h1>
+          <h1 className="text-sm font-semibold">{current?.label ?? 'Planning'}</h1>
           <button className="relative ml-auto rounded p-1.5 text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground">
             <Bell className="h-4 w-4" />
             {(notifications.data?.unread ?? 0) > 0 && (

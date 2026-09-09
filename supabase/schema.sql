@@ -1,5 +1,5 @@
 -- ===========================================================================
--- Pomelo-Paradigm — planning & tickets
+-- Planning & tickets
 -- Base de données Supabase : tables, sécurité, déclencheurs et données de base.
 --
 -- À exécuter UNE FOIS, en entier, dans Supabase → SQL Editor → New query.
@@ -91,9 +91,12 @@ create table if not exists public.clients (
 );
 
 -- « object » est un mot réservé : la table s'appelle project_objects.
+-- Un objet est un type de mission (calage, montage, contrôle des livrables…).
+-- Sans client, il est proposé pour tous les clients ; avec un client, il lui
+-- est réservé.
 create table if not exists public.project_objects (
   id uuid primary key default gen_random_uuid(),
-  client_id uuid not null references public.clients (id) on delete cascade,
+  client_id uuid references public.clients (id) on delete cascade,
   name text not null,
   reference text,
   description text,
@@ -101,6 +104,25 @@ create table if not exists public.project_objects (
   archived_at timestamptz,
   created_at timestamptz not null default now(),
   unique (client_id, name)
+);
+
+-- « unique (client_id, name) » ne joue pas quand client_id est vide.
+create unique index if not exists project_objects_nom_commun_idx
+  on public.project_objects (name)
+  where client_id is null;
+
+-- ---------------------------------------------------------------------------
+-- 3 bis. Étiquettes colorées posées sur les tickets
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.labels (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  color text not null default '#F2603C',
+  description text,
+  position integer not null default 0,
+  archived_at timestamptz,
+  created_at timestamptz not null default now()
 );
 
 -- ---------------------------------------------------------------------------
@@ -163,6 +185,14 @@ create table if not exists public.ticket_assignees (
 );
 
 create index if not exists ticket_assignees_user_idx on public.ticket_assignees (user_id, start_at);
+
+create table if not exists public.ticket_labels (
+  ticket_id uuid not null references public.tickets (id) on delete cascade,
+  label_id uuid not null references public.labels (id) on delete cascade,
+  primary key (ticket_id, label_id)
+);
+
+create index if not exists ticket_labels_label_idx on public.ticket_labels (label_id);
 
 -- ---------------------------------------------------------------------------
 -- 6. Événements (réunion, congé, formation…)
@@ -454,6 +484,8 @@ alter table public.event_participants enable row level security;
 alter table public.comments          enable row level security;
 alter table public.notifications     enable row level security;
 alter table public.audit_log         enable row level security;
+alter table public.labels            enable row level security;
+alter table public.ticket_labels     enable row level security;
 
 -- Petit utilitaire pour éviter la répétition à la main.
 do $$
@@ -467,6 +499,8 @@ begin
       ('team_memberships',    'team:view',            'team:manage'),
       ('clients',             'client:view',          'client:manage'),
       ('project_objects',     'project_object:view',  'project_object:manage'),
+      ('labels',              'label:view',           'label:manage'),
+      ('ticket_labels',       'ticket:view',          'ticket:update'),
       ('statuses',            'planning:view',        'status:manage'),
       ('tickets',             'ticket:view',          'ticket:update'),
       ('ticket_assignees',    'ticket:view',          'ticket:assign'),
@@ -569,7 +603,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['tickets', 'ticket_assignees', 'events', 'comments', 'notifications']
+  foreach t in array array['tickets', 'ticket_assignees', 'ticket_labels', 'events', 'comments', 'notifications']
   loop
     if not exists (
       select 1 from pg_publication_tables
@@ -599,7 +633,11 @@ begin
     from public.project_objects
     where id = new.project_object_id;
 
-    new.client_id := object_client;
+    -- Un type de mission réservé à un client impose ce client. Un type commun
+    -- (sans client) ne touche pas au client choisi sur le ticket.
+    if object_client is not null then
+      new.client_id := object_client;
+    end if;
   end if;
   return new;
 end;

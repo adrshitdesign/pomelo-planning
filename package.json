@@ -2,7 +2,7 @@
   "name": "pomelo-planning",
   "private": true,
   "version": "0.1.0",
-  "description": "Application de planning et de gestion de tickets pour Pomelo-Paradigm",
+  "description": "Application de planning et de gestion de tickets",
   "workspaces": [
     "apps/api",
     "apps/web"

@@ -1,4 +1,4 @@
-# Pomelo-Paradigm — Planning & tickets
+# Planning & tickets
 
 Application web de planning et de gestion de tickets. Monorepo npm workspaces :
 une API NestJS + Prisma/PostgreSQL, un SPA React/Vite. Le planning est la page
@@ -16,7 +16,7 @@ npm run dev                   # API :3000 + front :5173
 ```
 
 Connexion de démonstration : les identifiants sont ceux de `SEED_ADMIN_EMAIL` /
-`SEED_ADMIN_PASSWORD` dans `.env` (par défaut `admin@pomelo-paradigm.fr` /
+`SEED_ADMIN_PASSWORD` dans `.env` (par défaut `admin@exemple.fr` /
 `Admin123!` — à changer avant toute mise en ligne).
 
 Documentation API auto-générée (hors production) : <http://localhost:3000/api/docs>
@@ -58,7 +58,7 @@ pomelo-planning/
 Les couleurs actuelles (teal / corail / ambre) sont des **placeholders**.
 Toute la palette vit dans `apps/web/src/styles/tokens.css` sous forme de
 variables CSS ; aucun composant ne code une couleur en dur. Pour appliquer la
-charte Pomelo-Paradigm définitive, il suffit de remplacer les valeurs de ce
+charte graphique définitive, il suffit de remplacer les valeurs de ce
 fichier (`--primary`, `--accent`, `--highlight`, `--category-1..6`…).
 
 Distinction visuelle obligatoire, appliquée partout où un élément de planning

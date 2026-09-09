@@ -41,7 +41,7 @@ async function bootstrap() {
 
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('Pomelo-Paradigm — Planning API')
+      .setTitle('Planning API')
       .setDescription('Planning, tickets, événements, RBAC')
       .setVersion('0.1.0')
       .addBearerAuth()

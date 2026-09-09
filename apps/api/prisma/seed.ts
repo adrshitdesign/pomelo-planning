@@ -90,11 +90,11 @@ async function main() {
 
   console.log('→ Utilisateurs');
   const demoUsers = [
-    { email: process.env.SEED_ADMIN_EMAIL ?? 'admin@pomelo-paradigm.fr', name: 'Admin Pomelo', role: 'admin', team: 'Direction' },
-    { email: 'claire.dubois@pomelo-paradigm.fr', name: 'Claire Dubois', role: 'editor', team: 'Design' },
-    { email: 'yanis.mercier@pomelo-paradigm.fr', name: 'Yanis Mercier', role: 'editor', team: 'Développement' },
-    { email: 'sofia.laurent@pomelo-paradigm.fr', name: 'Sofia Laurent', role: 'editor', team: 'Production' },
-    { email: 'tom.bernard@pomelo-paradigm.fr', name: 'Tom Bernard', role: 'reader', team: 'Commercial' },
+    { email: process.env.SEED_ADMIN_EMAIL ?? 'admin@exemple.fr', name: 'Admin', role: 'admin', team: 'Direction' },
+    { email: 'claire.dubois@exemple.fr', name: 'Claire Dubois', role: 'editor', team: 'Design' },
+    { email: 'yanis.mercier@exemple.fr', name: 'Yanis Mercier', role: 'editor', team: 'Développement' },
+    { email: 'sofia.laurent@exemple.fr', name: 'Sofia Laurent', role: 'editor', team: 'Production' },
+    { email: 'tom.bernard@exemple.fr', name: 'Tom Bernard', role: 'reader', team: 'Commercial' },
   ];
 
   const password = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';

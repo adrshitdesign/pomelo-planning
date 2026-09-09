@@ -17,6 +17,7 @@ import {
 import {
   useClients,
   useEventMutations,
+  useLabels,
   useMoveTicket,
   usePlanning,
   useProjectObjects,
@@ -59,6 +60,7 @@ export function PlanningPage() {
   const teams = useTeams();
   const clients = useClients();
   const projectObjects = useProjectObjects();
+  const labels = useLabels();
 
   const move = useMoveTicket(params);
   const tickets = useTicketMutations();
@@ -70,10 +72,21 @@ export function PlanningPage() {
   const canMove = can(P.PLANNING_MOVE);
   const canCreate = can(P.TICKET_CREATE);
 
-  const items = useMemo(
-    () => toItems(planning.data?.tickets ?? [], planning.data?.events ?? []),
-    [planning.data],
-  );
+  const items = useMemo(() => {
+    const all = toItems(planning.data?.tickets ?? [], planning.data?.events ?? []);
+    return all.filter((item) => {
+      // Les événements ne portent ni statut ni priorité : un filtre de ce type
+      // les masque, sinon on les garde.
+      if (filters.statusId && (item.raw as { statusId?: string }).statusId !== filters.statusId) {
+        return false;
+      }
+      if (filters.priority && item.priority !== filters.priority) return false;
+      if (filters.labelId && !item.labels.some((l) => l.id === filters.labelId)) return false;
+      if (filters.projectObjectId && item.projectObjectId !== filters.projectObjectId) return false;
+      if (filters.unassignedOnly && item.assigneeIds.length > 0) return false;
+      return true;
+    });
+  }, [planning.data, filters]);
 
   const syncState: 'idle' | 'saving' | 'error' = move.isPending
     ? 'saving'
@@ -151,6 +164,15 @@ export function PlanningPage() {
       startAt: item.startAt.toISOString(),
       endAt: endAt.toISOString(),
     });
+    // Le bloc affiché suit le temps réel : si on l'étire alors qu'un temps
+    // réel existe, c'est ce temps réel qu'on vient de corriger.
+    if (item.adjustedByActual) {
+      const minutes = Math.max(
+        15,
+        Math.round((endAt.getTime() - item.startAt.getTime()) / 60000),
+      );
+      tickets.update.mutate({ id: item.id, actualMinutes: minutes });
+    }
   };
 
   const handleQuickCreate = async (payload: Record<string, unknown>, openDetail: boolean) => {
@@ -205,6 +227,9 @@ export function PlanningPage() {
         teams={teams.data ?? []}
         users={users.data ?? []}
         clients={clients.data ?? []}
+        projectObjects={projectObjects.data ?? []}
+        statuses={statuses.data ?? []}
+        labels={labels.data ?? []}
         canCreate={canCreate}
         onViewChange={setView}
         onGroupChange={setGroupMode}

@@ -4,6 +4,12 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { durationToHeight, minutesToOffset, type PlanningItem } from './planning-utils';
 
+/** Repère discret pour les deux priorités qui comptent. */
+const PRIORITY_MARK: Partial<Record<NonNullable<PlanningItem['priority']>, string>> = {
+  HIGH: '!',
+  URGENT: '!!',
+};
+
 interface Props {
   item: PlanningItem;
   /** Ressource (personne) de la colonne d'origine, pour la réassignation. */
@@ -71,11 +77,49 @@ export function PlanningItemCard({
       {...attributes}
       {...listeners}
     >
-      <p className="truncate text-[11px] font-medium leading-tight">{item.title}</p>
+      <div className="flex items-start gap-1">
+        {/* Pastille de statut : la couleur du statut, en un coup d'œil. */}
+        {item.statusColor && (
+          <span
+            className="mt-[3px] h-2 w-2 shrink-0 rounded-full"
+            style={{ backgroundColor: item.statusColor }}
+            title={item.statusName}
+          />
+        )}
+        <p className="min-w-0 flex-1 truncate text-[11px] font-medium leading-tight">{item.title}</p>
+        {item.priority && PRIORITY_MARK[item.priority] && (
+          <span
+            className="shrink-0 text-[11px] font-bold leading-tight text-destructive"
+            title={item.priority === 'URGENT' ? 'Urgent' : 'Priorité haute'}
+          >
+            {PRIORITY_MARK[item.priority]}
+          </span>
+        )}
+      </div>
+
+      {/* Client · type de mission */}
+      {item.subtitle && (
+        <p className="truncate text-[10px] font-medium text-muted-foreground">{item.subtitle}</p>
+      )}
+
       <p className="truncate text-[10px] text-muted-foreground">
         {format(item.startAt, 'HH:mm')} – {format(item.endAt, 'HH:mm')}
-        {item.subtitle ? ` · ${item.subtitle}` : ''}
+        {item.adjustedByActual && ' · réel'}
       </p>
+
+      {/* Étiquettes : de simples traits colorés, pour ne pas saturer la carte. */}
+      {item.labels.length > 0 && (
+        <div className="mt-0.5 flex flex-wrap gap-0.5">
+          {item.labels.slice(0, 4).map((label) => (
+            <span
+              key={label.id}
+              title={label.name}
+              className="h-1 w-4 rounded-full"
+              style={{ backgroundColor: label.color }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Poignée de redimensionnement : change la durée (brief section 8). */}
       {!readOnly && (

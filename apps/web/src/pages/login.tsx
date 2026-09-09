@@ -48,10 +48,10 @@ export function LoginPage() {
       <aside className="hidden w-[46%] max-w-xl flex-col justify-between bg-sidebar p-10 text-sidebar-foreground lg:flex">
         <div className="flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded bg-accent text-sm font-bold text-accent-foreground">
-            PP
+            PL
           </span>
           <div className="leading-tight">
-            <p className="text-sm font-semibold tracking-tight">Pomelo-Paradigm</p>
+            <p className="text-sm font-semibold tracking-tight">Planning</p>
             <p className="text-[11px] text-sidebar-muted">Planning &amp; tickets</p>
           </div>
         </div>
@@ -71,7 +71,7 @@ export function LoginPage() {
         </div>
 
         <p className="text-[11px] text-sidebar-muted">
-          Accès réservé aux collaborateurs Pomelo-Paradigm.
+          Accès réservé aux membres de l’équipe.
         </p>
       </aside>
 
@@ -80,10 +80,10 @@ export function LoginPage() {
         <form onSubmit={onSubmit} className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
             <span className="flex h-9 w-9 items-center justify-center rounded bg-accent text-sm font-bold text-accent-foreground">
-              PP
+              PL
             </span>
             <div className="leading-tight">
-              <p className="text-sm font-semibold">Pomelo-Paradigm</p>
+              <p className="text-sm font-semibold">Planning</p>
               <p className="text-[11px] text-muted-foreground">Planning &amp; tickets</p>
             </div>
           </div>
@@ -139,7 +139,7 @@ export function LoginPage() {
                 id="email"
                 type="email"
                 autoComplete="username"
-                placeholder="prenom.nom@pomelo-paradigm.fr"
+                placeholder="prenom.nom@exemple.fr"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

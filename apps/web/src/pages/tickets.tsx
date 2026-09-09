@@ -120,7 +120,7 @@ export function TicketsPage() {
           value={filters.projectObjectId ?? ''}
           onChange={(e) => setFilters({ ...filters, projectObjectId: e.target.value || undefined })}
         >
-          <option value="">Tous les objets</option>
+          <option value="">Toutes les missions</option>
           {(projectObjects.data ?? [])
             .filter((o) => !filters.clientId || o.clientId === filters.clientId)
             .map((object) => (
@@ -266,7 +266,7 @@ function TicketTable({
             <th className="px-3 py-2 font-medium">#</th>
             <th className="px-3 py-2 font-medium">Titre</th>
             <th className="px-3 py-2 font-medium">Statut</th>
-            <th className="px-3 py-2 font-medium">Client / objet</th>
+            <th className="px-3 py-2 font-medium">Client / mission</th>
             <th className="px-3 py-2 font-medium">Équipe</th>
             <th className="px-3 py-2 font-medium">Priorité</th>
             <th className="px-3 py-2 font-medium">Créneau</th>

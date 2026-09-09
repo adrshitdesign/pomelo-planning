@@ -2,7 +2,7 @@
   "name": "@pomelo/api",
   "version": "0.1.0",
   "private": true,
-  "description": "API NestJS — planning & tickets Pomelo-Paradigm",
+  "description": "API NestJS — planning & tickets",
   "scripts": {
     "build": "nest build",
     "start": "nest start",

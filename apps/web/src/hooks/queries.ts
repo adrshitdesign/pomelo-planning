@@ -12,6 +12,7 @@ export const keys = {
   teams: () => ['teams'] as const,
   clients: () => ['clients'] as const,
   projectObjects: () => ['project-objects'] as const,
+  labels: () => ['labels'] as const,
   statuses: () => ['statuses'] as const,
   roles: () => ['roles'] as const,
   permissions: () => ['permissions'] as const,
@@ -34,6 +35,9 @@ export const useClients = () => useQuery({ queryKey: keys.clients(), queryFn: da
 
 export const useProjectObjects = () =>
   useQuery({ queryKey: keys.projectObjects(), queryFn: data.fetchProjectObjects, staleTime: 120_000 });
+
+export const useLabels = () =>
+  useQuery({ queryKey: keys.labels(), queryFn: data.fetchLabels, staleTime: 120_000 });
 
 export const useRoles = () => useQuery({ queryKey: keys.roles(), queryFn: data.fetchRoles });
 

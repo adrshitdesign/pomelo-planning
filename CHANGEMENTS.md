@@ -1,93 +1,106 @@
 # Ce qui a changé dans cette version
 
-## 1. L'application passe sur Supabase et GitHub Pages
+⚠️ **Avant tout : lancer `supabase/migrations/002-types-de-mission-et-etiquettes.sql`**
+dans Supabase → SQL Editor → New query → Run. Sans ça, les nouveautés
+ci-dessous n'ont pas de quoi fonctionner et l'application affichera des erreurs.
 
-C'est le gros changement. Jusqu'ici l'application avait besoin d'un serveur
-allumé quelque part. Maintenant :
+## 1. Les objets deviennent des types de mission
 
-- **l'écran** est un site figé, hébergé gratuitement par GitHub Pages ;
-- **la base de données et les comptes** sont chez Supabase ;
-- l'écran parle directement à la base, sans intermédiaire.
+Un objet ne dépend plus d'un client : c'est la **nature du travail** — calage,
+montage, contrôle des livrables, corrections, exécution. Créé une fois, il est
+proposé pour tous les clients.
 
-Conséquence : plus rien à héberger soi-même, une adresse permanente, et les
-données partagées par toute l'équipe.
+- **Administration → Types de mission** : créer, renommer, recolorer, archiver.
+- **Les éditeurs y ont accès**, plus seulement les administrateurs. Ils peuvent
+  aussi créer des clients.
+- Un type peut malgré tout être **réservé à un client** si c'est une mission
+  qui n'existe que chez lui. Dans ce cas, choisir ce type impose ce client.
+- Les objets déjà créés pour un client restent en place, sous
+  « Réservés à un client ». Rien n'est perdu.
 
-Le programme NestJS de `apps/api` **ne sert plus** pour la version en ligne. Il
-reste dans le dossier, dormant. Les vérifications de droits qu'il assurait sont
-maintenant écrites dans la base elle-même : chaque table refuse ce que la
-personne connectée n'a pas le droit de faire, quoi qu'envoie le navigateur.
-C'est une garantie plus forte qu'avant, parce qu'elle ne dépend plus du code de
-l'écran.
+Cinq types sont créés d'office : calage, montage, contrôle des livrables,
+corrections, exécution. À renommer ou compléter selon vos habitudes.
 
-**Marche à suivre complète dans `METTRE-EN-LIGNE.md`.** Comptez 20 minutes.
+## 2. Le planning suit le temps réel
 
-### Ce qui change dans l'usage
+Dès qu'un temps réel est saisi sur un ticket, **c'est lui qui commande la taille
+du bloc dans le planning**. Une tâche prévue 4 h mais faite en 3 h n'occupe plus
+que 3 h : la charge affichée devient la charge vraie.
 
-- **Création des comptes** : chacun crée le sien depuis l'écran de connexion,
-  onglet « Créer un compte ». L'administrateur attribue ensuite le rôle et
-  l'équipe depuis Administration. Sans rôle, une personne ne voit rien.
-- **Le premier compte créé devient automatiquement administrateur.**
-- Les mots de passe sont gérés par Supabase — l'application n'y a jamais accès.
+La mention « réel » apparaît sous l'horaire de la carte. Le temps estimé reste
+visible dans le détail du ticket, pour la comparaison.
 
-### Nouveaux fichiers
+Si on étire un bloc dont le temps réel est déjà saisi, c'est ce temps réel qu'on
+corrige — le geste et le chiffre restent cohérents.
 
-| Fichier | Rôle |
-|---|---|
-| `supabase/schema.sql` | Toutes les tables, les règles d'accès, les déclencheurs |
-| `supabase/seed.sql` | Permissions, rôles, statuts et équipes de départ |
-| `METTRE-EN-LIGNE.md` | Le guide, étape par étape |
-| `.github/workflows/deploy.yml` | Publication automatique à chaque modification |
+## 3. Étiquettes colorées
 
-Le journal d'audit et les notifications d'assignation sont désormais écrits
-directement par la base, automatiquement.
+Une étiquette, c'est **une couleur qui veut dire quelque chose**.
 
-## 2. Nouvelle vue « journée » en frise horizontale
+- **Administration → Étiquettes** : nom, couleur, courte explication.
+  Accessible aux éditeurs comme aux administrateurs.
+- On en pose autant qu'on veut sur un ticket, depuis son panneau de détail.
+- Elles apparaissent sous forme de petits traits colorés sur la carte du
+  planning, et la première donne sa couleur au bloc.
+- Elles servent de filtre sur le planning.
 
-La vue **Jour** ne ressemble plus à la vue semaine en plus étroit : c'est une
-frise horizontale, une ligne par personne, les heures en abscisse — la lecture
-d'un planning d'atelier.
+Quatre étiquettes de départ : Urgent client, Relecture, À refacturer, Interne.
 
-- Colonne de gauche : photo, nom, **total d'heures planifiées** de la journée.
-- Bandeau du haut : total pour l'ensemble affiché, et une ligne **« Personnes
-  planifiées »** qui compte heure par heure combien de personnes sont occupées.
-  C'est ce qui fait apparaître les trous de charge.
-- Trait vertical orange à l'heure courante.
-- Regroupement **par équipe** : une section par équipe. Une personne présente
-  dans deux équipes apparaît deux fois mais n'est comptée qu'une fois dans les
-  totaux.
-- Mêmes gestes que dans les autres vues : glisser pour décaler, glisser sur la
-  ligne d'un collègue pour réassigner, tirer le bord droit pour la durée,
-  Alt + glisser pour dupliquer, clic sur une case vide pour créer.
+## 4. Les cartes du planning en disent plus
 
-Heures de 00 h à 23 h avec défilement, cadré sur 07 h au chargement, heures
-hors 7 h – 19 h grisées.
+Sur chaque carte, sans avoir à l'ouvrir :
 
-## 3. La duplication fonctionne
+- une **pastille de couleur du statut** devant le titre ;
+- **client · type de mission** en dessous ;
+- **!!** pour une tâche urgente, **!** pour une priorité haute ;
+- les horaires, avec la mention « réel » le cas échéant ;
+- les traits colorés des étiquettes.
 
-**Avant** : la touche n'était lue qu'au tout début du glisser. Comme on appuie
-presque toujours dessus *après* avoir commencé à déplacer la carte, la
-duplication ne se déclenchait jamais.
+## 5. Filtres du planning
 
-**Maintenant** : la touche est surveillée en permanence. Trois touches
-acceptées — **Alt (⌥)**, **Ctrl** ou **Cmd**. Sur Mac, préférer **Alt** :
-Ctrl + clic y ouvre le menu contextuel du système. Un bandeau **« Copie —
-relâchez pour dupliquer »** confirme que c'est actif.
+La barre du planning permet maintenant de filtrer par **équipe, personne,
+client, type de mission, statut, priorité, étiquette**, et de n'afficher que les
+tâches **sans personne assignée**.
 
-## 4. Le design reprend l'esprit Pomdoc
+Le nombre de filtres actifs s'affiche, avec un bouton pour tout effacer d'un
+coup. Choisir un client restreint automatiquement la liste des types de mission.
 
-Bleu marine institutionnel, corail « pomelo » en accent, neutres froids.
-Navigation latérale en bandeau sombre, écran de connexion en deux colonnes.
+## 6. Tableau de bord de pilotage
 
-⚠️ Les codes couleur exacts de Pomdoc n'ont pas pu être récupérés depuis le
-site : la palette est une approximation. Pour la caler précisément, ouvrir
-`apps/web/src/styles/tokens.css` et remplacer les six valeurs marquées ★.
+Quatre questions, dans cet ordre.
 
-## 5. Corrections d'affichage
+**Ce qui demande une décision** — en retard, sans personne, non planifiées,
+terminées sans temps réel saisi. Les cinq premiers retards sont listés
+nommément.
 
-- Les heures de la colonne de gauche étaient décalées d'une ligne par rapport
-  aux jours : aligné.
-- Grille de la vue semaine resserrée : deux à trois personnes visibles au lieu
-  d'une seule.
-- Dates en minuscules correctes (« Semaine du 2 septembre »).
-- Écran blanc sur une adresse Codespaces : le serveur de développement refusait
-  les noms de domaine inconnus, ils sont maintenant autorisés.
+**Taux d'occupation** — par personne, heures posées rapportées aux heures
+ouvrées de la période (base 7 h/jour). Au-delà de 100 %, la barre passe en
+orange : la personne a plus de travail posé que d'heures disponibles.
+
+**Estimé face au réel** — par personne, par client et par type de mission, sur
+les seules tâches dont le temps réel a été saisi. Trié par écart décroissant :
+la première ligne est celle où l'estimation dérape le plus. Vert quand on tient,
+orange quand on dépasse de plus de 15 %.
+
+**Où part le temps** — répartition des heures par client et par type de mission,
+en heures et en pourcentage.
+
+Une liste déroulante permet de basculer entre **la semaine, le mois et le
+trimestre**.
+
+## 7. Le nom Pomelo-Paradigm a été retiré
+
+C'est une marque déposée et l'application est en test : elle s'appelle
+simplement **« Planning »** partout — titre de l'onglet, écran de connexion,
+bandeau latéral, documentation. Les adresses email d'exemple ne mentionnent plus
+le studio non plus.
+
+---
+
+## Rappel des versions précédentes
+
+- Le **client se choisit directement sur un ticket**, le type de mission étant
+  facultatif (mise à jour `001`).
+- Vue **journée en frise horizontale**, une ligne par personne.
+- **Alt + glisser** pour dupliquer une tâche.
+- Hébergement : écran sur GitHub Pages, base et comptes chez Supabase.

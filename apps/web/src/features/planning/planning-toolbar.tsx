@@ -1,11 +1,12 @@
 import { addDays, addMonths, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { GroupMode, PlanningView } from './planning-utils';
-import type { Client, Team, User } from '@/lib/types';
+import type { Client, Label, ProjectObject, Status, Team, User } from '@/lib/types';
+import { PRIORITY_LABELS } from '@/lib/utils';
 
 const VIEWS: { key: PlanningView; label: string }[] = [
   { key: 'day', label: 'Jour' },
@@ -23,6 +24,17 @@ export interface PlanningFilters {
   teamId?: string;
   userId?: string;
   clientId?: string;
+  projectObjectId?: string;
+  statusId?: string;
+  priority?: string;
+  labelId?: string;
+  /** Ne garder que les tâches sans personne assignée. */
+  unassignedOnly?: boolean;
+}
+
+/** Nombre de filtres actifs, pour l'afficher et permettre de tout effacer. */
+export function countActiveFilters(filters: PlanningFilters): number {
+  return Object.values(filters).filter(Boolean).length;
 }
 
 export function PlanningToolbar({
@@ -33,6 +45,9 @@ export function PlanningToolbar({
   teams,
   users,
   clients,
+  projectObjects,
+  statuses,
+  labels,
   canCreate,
   onViewChange,
   onGroupChange,
@@ -47,6 +62,9 @@ export function PlanningToolbar({
   teams: Team[];
   users: User[];
   clients: Client[];
+  projectObjects: ProjectObject[];
+  statuses: Status[];
+  labels: Label[];
   canCreate: boolean;
   onViewChange: (view: PlanningView) => void;
   onGroupChange: (mode: GroupMode) => void;
@@ -144,7 +162,13 @@ export function PlanningToolbar({
         <Select
           className="h-8 w-44"
           value={filters.clientId ?? ''}
-          onChange={(e) => onFiltersChange({ ...filters, clientId: e.target.value || undefined })}
+          onChange={(e) =>
+            onFiltersChange({
+              ...filters,
+              clientId: e.target.value || undefined,
+              projectObjectId: undefined,
+            })
+          }
           aria-label="Filtrer par client"
         >
           <option value="">Tous les clients</option>
@@ -154,6 +178,88 @@ export function PlanningToolbar({
             </option>
           ))}
         </Select>
+
+        <Select
+          className="h-8 w-44"
+          value={filters.projectObjectId ?? ''}
+          onChange={(e) =>
+            onFiltersChange({ ...filters, projectObjectId: e.target.value || undefined })
+          }
+          aria-label="Filtrer par type de mission"
+        >
+          <option value="">Toutes les missions</option>
+          {projectObjects
+            .filter((o) => !o.clientId || !filters.clientId || o.clientId === filters.clientId)
+            .map((object) => (
+              <option key={object.id} value={object.id}>
+                {object.name}
+              </option>
+            ))}
+        </Select>
+
+        <Select
+          className="h-8 w-40"
+          value={filters.statusId ?? ''}
+          onChange={(e) => onFiltersChange({ ...filters, statusId: e.target.value || undefined })}
+          aria-label="Filtrer par statut"
+        >
+          <option value="">Tous les statuts</option>
+          {statuses.map((status) => (
+            <option key={status.id} value={status.id}>
+              {status.name}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          className="h-8 w-32"
+          value={filters.priority ?? ''}
+          onChange={(e) => onFiltersChange({ ...filters, priority: e.target.value || undefined })}
+          aria-label="Filtrer par priorité"
+        >
+          <option value="">Priorité</option>
+          {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          className="h-8 w-40"
+          value={filters.labelId ?? ''}
+          onChange={(e) => onFiltersChange({ ...filters, labelId: e.target.value || undefined })}
+          aria-label="Filtrer par étiquette"
+        >
+          <option value="">Toutes les étiquettes</option>
+          {labels.map((label) => (
+            <option key={label.id} value={label.id}>
+              {label.name}
+            </option>
+          ))}
+        </Select>
+
+        <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={Boolean(filters.unassignedOnly)}
+            onChange={(e) =>
+              onFiltersChange({ ...filters, unassignedOnly: e.target.checked || undefined })
+            }
+          />
+          Sans personne
+        </label>
+
+        {countActiveFilters(filters) > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onFiltersChange({})}
+            title="Effacer les filtres"
+          >
+            <X className="h-3.5 w-3.5" /> {countActiveFilters(filters)}
+          </Button>
+        )}
 
         {canCreate && (
           <Button size="sm" onClick={onCreate}>

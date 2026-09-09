@@ -99,7 +99,7 @@ export class BootstrapService implements OnModuleInit {
   private async ensureAdmin() {
     if ((await this.prisma.user.count()) > 0) return;
 
-    const email = (process.env.SEED_ADMIN_EMAIL ?? 'admin@pomelo-paradigm.fr').toLowerCase();
+    const email = (process.env.SEED_ADMIN_EMAIL ?? 'admin@exemple.fr').toLowerCase();
     const password = process.env.SEED_ADMIN_PASSWORD ?? randomBytes(9).toString('base64url');
     const adminRole = await this.prisma.role.findUnique({ where: { key: 'admin' } });
 

@@ -126,7 +126,7 @@ export function PlanningBoard({
     return [
       {
         key: 'company',
-        label: 'Pomelo-Paradigm',
+        label: 'Toute l’équipe',
         resource: undefined,
         filter: () => true,
       },
@@ -232,7 +232,7 @@ export function PlanningBoard({
         resources: resources.filter((r) => r.teams.some((t) => t.id === team.id)),
       }));
     }
-    return [{ key: 'all', label: 'Pomelo-Paradigm', resources }];
+    return [{ key: 'all', label: 'Toute l’équipe', resources }];
   }, [groupMode, resources, teams]);
 
   const handleDragEndHorizontal = (event: DragEndEvent) => {
