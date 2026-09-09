@@ -10,7 +10,7 @@ import { PRIORITY_LABELS, formatDuration } from '@/lib/utils';
 import { useAudit, useTicket, useTicketMutations } from '@/hooks/queries';
 import { useAuth } from '@/store/auth';
 import { P } from '@/lib/permissions';
-import type { ProjectObject, Status, Team, User } from '@/lib/types';
+import type { Client, ProjectObject, Status, Team, User } from '@/lib/types';
 
 const toLocalInput = (iso: string | null) =>
   iso ? format(new Date(iso), "yyyy-MM-dd'T'HH:mm") : '';
@@ -20,6 +20,7 @@ export function TicketSlideOver({
   statuses,
   users,
   teams,
+  clients,
   projectObjects,
   onClose,
 }: {
@@ -27,6 +28,7 @@ export function TicketSlideOver({
   statuses: Status[];
   users: User[];
   teams: Team[];
+  clients: Client[];
   projectObjects: ProjectObject[];
   onClose: () => void;
 }) {
@@ -38,6 +40,11 @@ export function TicketSlideOver({
   const audit = useAudit({ entityType: 'TICKET', entityId: ticketId ?? undefined, take: 30 });
 
   const canEdit = can(P.TICKET_UPDATE);
+
+  // Quand un client est choisi, la liste des objets se restreint aux siens.
+  const objectChoices = ticket?.clientId
+    ? projectObjects.filter((o) => o.clientId === ticket.clientId)
+    : projectObjects;
 
   useEffect(() => setTab('detail'), [ticketId]);
 
@@ -52,9 +59,9 @@ export function TicketSlideOver({
       onOpenChange={(open) => !open && onClose()}
       title={ticket ? `#${ticket.reference} · ${ticket.title}` : 'Ticket'}
       subtitle={
-        ticket?.projectObject
-          ? `${ticket.projectObject.client.name} · ${ticket.projectObject.name}`
-          : 'Sans objet rattaché'
+        ticket?.client
+          ? [ticket.client.name, ticket.projectObject?.name].filter(Boolean).join(' · ')
+          : 'Sans client rattaché'
       }
       actions={
         ticket && canEdit ? (
@@ -242,22 +249,64 @@ export function TicketSlideOver({
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="ticket-object">Objet</Label>
+                  <Label htmlFor="ticket-client">Client</Label>
                   <Select
-                    id="ticket-object"
-                    value={ticket.projectObjectId ?? ''}
+                    id="ticket-client"
+                    value={ticket.clientId ?? ''}
                     disabled={!canEdit}
-                    onChange={(e) => patch({ projectObjectId: e.target.value || undefined })}
+                    onChange={(e) => {
+                      const clientId = e.target.value;
+                      // Un objet déjà choisi qui appartient à un autre client
+                      // n'a plus de sens : on le détache.
+                      const current = projectObjects.find((o) => o.id === ticket.projectObjectId);
+                      const keepObject = Boolean(current) && current!.clientId === clientId;
+                      patch({
+                        clientId: clientId || '',
+                        projectObjectId: keepObject ? undefined : '',
+                      });
+                    }}
                   >
                     <option value="">—</option>
-                    {projectObjects.map((object) => (
-                      <option key={object.id} value={object.id}>
-                        {object.client?.name ? `${object.client.name} · ` : ''}
-                        {object.name}
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
                       </option>
                     ))}
                   </Select>
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="ticket-object">
+                  Objet <span className="font-normal text-muted-foreground">(facultatif)</span>
+                </Label>
+                <Select
+                  id="ticket-object"
+                  value={ticket.projectObjectId ?? ''}
+                  disabled={!canEdit}
+                  onChange={(e) => {
+                    const objectId = e.target.value;
+                    const object = projectObjects.find((o) => o.id === objectId);
+                    patch({
+                      projectObjectId: objectId || '',
+                      // L'objet porte son client : on le recopie sur le ticket.
+                      ...(object ? { clientId: object.clientId } : {}),
+                    });
+                  }}
+                >
+                  <option value="">—</option>
+                  {objectChoices.map((object) => (
+                    <option key={object.id} value={object.id}>
+                      {!ticket.clientId && object.client?.name ? `${object.client.name} · ` : ''}
+                      {object.name}
+                    </option>
+                  ))}
+                </Select>
+                {ticket.clientId && objectChoices.length === 0 && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Aucun objet pour ce client. On peut en créer depuis l'écran Clients.
+                  </p>
+                )}
               </div>
 
               <div>

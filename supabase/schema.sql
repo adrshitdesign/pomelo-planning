@@ -137,6 +137,9 @@ create table if not exists public.tickets (
   actual_minutes integer,
   creator_id uuid references public.profiles (id) on delete set null,
   team_id uuid references public.teams (id) on delete set null,
+  -- Le client est porté par le ticket ; l'objet est facultatif et, quand il
+  -- est renseigné, c'est lui qui fait foi (voir le déclencheur plus bas).
+  client_id uuid references public.clients (id) on delete set null,
   project_object_id uuid references public.project_objects (id) on delete set null,
   archived_at timestamptz,
   created_at timestamptz not null default now(),
@@ -147,6 +150,7 @@ create table if not exists public.tickets (
 create index if not exists tickets_range_idx on public.tickets (start_at, end_at);
 create index if not exists tickets_status_idx on public.tickets (status_id);
 create index if not exists tickets_archived_idx on public.tickets (archived_at);
+create index if not exists tickets_client_idx on public.tickets (client_id);
 
 create table if not exists public.ticket_assignees (
   id uuid primary key default gen_random_uuid(),
@@ -177,6 +181,7 @@ create table if not exists public.events (
   location text,
   creator_id uuid references public.profiles (id) on delete set null,
   team_id uuid references public.teams (id) on delete set null,
+  client_id uuid references public.clients (id) on delete set null,
   project_object_id uuid references public.project_objects (id) on delete set null,
   archived_at timestamptz,
   created_at timestamptz not null default now(),
@@ -185,6 +190,7 @@ create table if not exists public.events (
 );
 
 create index if not exists events_range_idx on public.events (start_at, end_at);
+create index if not exists events_client_idx on public.events (client_id);
 
 create table if not exists public.event_participants (
   id uuid primary key default gen_random_uuid(),
@@ -574,3 +580,37 @@ begin
   end loop;
 end;
 $$;
+
+-- ===========================================================================
+-- Cohérence client / objet
+-- ---------------------------------------------------------------------------
+-- Un ticket porte son client. Si un objet est choisi, c'est le client de cet
+-- objet qui l'emporte : impossible d'avoir « client A » avec un objet du
+-- « client B ».
+-- ===========================================================================
+
+create or replace function public.sync_client_from_object()
+returns trigger language plpgsql as $$
+declare
+  object_client uuid;
+begin
+  if new.project_object_id is not null then
+    select client_id into object_client
+    from public.project_objects
+    where id = new.project_object_id;
+
+    new.client_id := object_client;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists tickets_sync_client on public.tickets;
+create trigger tickets_sync_client
+  before insert or update of project_object_id, client_id on public.tickets
+  for each row execute function public.sync_client_from_object();
+
+drop trigger if exists events_sync_client on public.events;
+create trigger events_sync_client
+  before insert or update of project_object_id, client_id on public.events
+  for each row execute function public.sync_client_from_object();

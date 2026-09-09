@@ -29,19 +29,21 @@ import type {
 
 const TICKET_SELECT = `
   id, reference, title, description, status_id, priority, color, start_at, end_at,
-  estimated_minutes, actual_minutes, team_id, project_object_id, archived_at,
+  estimated_minutes, actual_minutes, team_id, client_id, project_object_id, archived_at,
   status:statuses(*),
   team:teams(id, name, color),
   creator:profiles!tickets_creator_id_fkey(id, name, avatar_url),
+  client:clients(id, name, color),
   project_object:project_objects(id, name, color, client:clients(id, name, color)),
   assignees:ticket_assignees(id, user_id, start_at, end_at, user:profiles(id, name, avatar_url))
 `;
 
 const EVENT_SELECT = `
   id, title, description, type, color, start_at, end_at, is_all_day, location,
-  team_id, archived_at,
+  team_id, client_id, archived_at,
   team:teams(id, name, color),
   creator:profiles!events_creator_id_fkey(id, name, avatar_url),
+  client:clients(id, name, color),
   project_object:project_objects(id, name, client:clients(id, name)),
   participants:event_participants(id, user_id, is_owner, user:profiles(id, name, avatar_url))
 `;
@@ -77,6 +79,10 @@ function mapTicket(row: Row): Ticket {
     actualMinutes: row.actual_minutes ?? null,
     teamId: row.team_id ?? null,
     team: row.team ?? null,
+    // Le client vient de la colonne du ticket ; s'il manque (donnée ancienne),
+    // on retombe sur celui de l'objet rattaché.
+    clientId: row.client_id ?? row.project_object?.client?.id ?? null,
+    client: row.client ?? row.project_object?.client ?? null,
     projectObjectId: row.project_object_id ?? null,
     projectObject: row.project_object
       ? {
@@ -111,6 +117,8 @@ function mapEvent(row: Row): PlanningEvent {
     location: row.location ?? null,
     teamId: row.team_id ?? null,
     team: row.team ?? null,
+    clientId: row.client_id ?? row.project_object?.client?.id ?? null,
+    client: row.client ?? row.project_object?.client ?? null,
     projectObject: row.project_object ?? null,
     creator: person(row.creator) ?? { id: '', name: '—', avatarUrl: null },
     participants: (row.participants ?? []).map((p: Row) => ({
@@ -305,8 +313,8 @@ export async function fetchPlanning(params: PlanningParams): Promise<PlanningPay
   // Filtres qui portent sur des tables liées : appliqués après lecture, le
   // volume d'une plage de planning restant petit.
   if (params.clientId) {
-    tickets = tickets.filter((t) => t.projectObject?.client.id === params.clientId);
-    events = events.filter((e) => e.projectObject?.client.id === params.clientId);
+    tickets = tickets.filter((t) => t.clientId === params.clientId);
+    events = events.filter((e) => e.clientId === params.clientId);
   }
   if (params.userId) {
     tickets = tickets.filter((t) => t.assignees.some((a) => a.userId === params.userId));
@@ -353,7 +361,7 @@ export async function fetchTickets(filters: TicketFilters): Promise<{ items: Tic
   const rows = unwrap<Row[]>(await query.order('start_at', { ascending: true, nullsFirst: false }));
   let items = rows.map(mapTicket);
 
-  if (filters.clientId) items = items.filter((t) => t.projectObject?.client.id === filters.clientId);
+  if (filters.clientId) items = items.filter((t) => t.clientId === filters.clientId);
   if (filters.assigneeId) {
     items = items.filter((t) => t.assignees.some((a) => a.userId === filters.assigneeId));
   }
@@ -395,6 +403,7 @@ export interface TicketInput {
   estimatedMinutes?: number;
   actualMinutes?: number;
   teamId?: string;
+  clientId?: string;
   projectObjectId?: string;
   assignees?: { userId: string; startAt?: string; endAt?: string }[];
 }
@@ -413,6 +422,7 @@ function ticketColumns(input: TicketInput): Row {
     estimatedMinutes: 'estimated_minutes',
     actualMinutes: 'actual_minutes',
     teamId: 'team_id',
+    clientId: 'client_id',
     projectObjectId: 'project_object_id',
   };
   for (const [key, column] of Object.entries(map)) {
@@ -559,6 +569,7 @@ export async function duplicateTicket(id: string, startAt?: string): Promise<Tic
     endAt: newEnd,
     estimatedMinutes: source.estimatedMinutes ?? undefined,
     teamId: source.teamId ?? undefined,
+    clientId: source.clientId ?? undefined,
     projectObjectId: source.projectObjectId ?? undefined,
     assignees: source.assignees.map((a) => ({
       userId: a.userId,
@@ -606,6 +617,7 @@ export interface EventInput {
   isAllDay?: boolean;
   location?: string;
   teamId?: string;
+  clientId?: string;
   projectObjectId?: string;
   participantIds?: string[];
 }
@@ -622,6 +634,7 @@ function eventColumns(input: EventInput): Row {
     isAllDay: 'is_all_day',
     location: 'location',
     teamId: 'team_id',
+    clientId: 'client_id',
     projectObjectId: 'project_object_id',
   };
   for (const [key, column] of Object.entries(map)) {

@@ -190,6 +190,7 @@ export function ClientsPage() {
         statuses={statuses.data ?? []}
         users={users.data ?? []}
         teams={teams.data ?? []}
+        clients={clients.data ?? []}
         projectObjects={projectObjects.data ?? []}
         onClose={() => setOpenTicketId(null)}
       />

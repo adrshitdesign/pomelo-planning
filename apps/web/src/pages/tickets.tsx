@@ -99,7 +99,13 @@ export function TicketsPage() {
         <Select
           className="h-8 w-36"
           value={filters.clientId ?? ''}
-          onChange={(e) => setFilters({ ...filters, clientId: e.target.value || undefined })}
+          onChange={(e) =>
+            setFilters({
+              ...filters,
+              clientId: e.target.value || undefined,
+              projectObjectId: undefined,
+            })
+          }
         >
           <option value="">Tous les clients</option>
           {(clients.data ?? []).map((client) => (
@@ -115,11 +121,13 @@ export function TicketsPage() {
           onChange={(e) => setFilters({ ...filters, projectObjectId: e.target.value || undefined })}
         >
           <option value="">Tous les objets</option>
-          {(projectObjects.data ?? []).map((object) => (
-            <option key={object.id} value={object.id}>
-              {object.name}
-            </option>
-          ))}
+          {(projectObjects.data ?? [])
+            .filter((o) => !filters.clientId || o.clientId === filters.clientId)
+            .map((object) => (
+              <option key={object.id} value={object.id}>
+                {object.name}
+              </option>
+            ))}
         </Select>
 
         <Select
@@ -186,14 +194,16 @@ export function TicketsPage() {
                       className="planning-item planning-item--ticket w-full p-2 text-left hover:bg-surface-muted"
                       style={{
                         ['--item-color' as string]:
-                          ticket.projectObject?.color ?? categoryColor(ticket.projectObjectId),
+                          ticket.projectObject?.color ?? ticket.client?.color ?? categoryColor(ticket.clientId),
                       }}
                     >
                       <p className="text-xs font-medium leading-tight">{ticket.title}</p>
                       <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                        {ticket.projectObject
-                          ? `${ticket.projectObject.client.name} · ${ticket.projectObject.name}`
-                          : 'Sans objet'}
+                        {ticket.client
+                          ? [ticket.client.name, ticket.projectObject?.name]
+                              .filter(Boolean)
+                              .join(' · ')
+                          : 'Sans client'}
                       </p>
                       <div className="mt-1.5 flex items-center gap-1">
                         <Badge>{PRIORITY_LABELS[ticket.priority]}</Badge>
@@ -217,6 +227,7 @@ export function TicketsPage() {
         statuses={statuses.data ?? []}
         users={users.data ?? []}
         teams={teams.data ?? []}
+        clients={clients.data ?? []}
         projectObjects={projectObjects.data ?? []}
         onClose={() => setQuickCreate(null)}
         onSubmit={async (payload, openDetail) => {
@@ -232,6 +243,7 @@ export function TicketsPage() {
         statuses={statuses.data ?? []}
         users={users.data ?? []}
         teams={teams.data ?? []}
+        clients={clients.data ?? []}
         projectObjects={projectObjects.data ?? []}
         onClose={() => setOpenTicketId(null)}
       />
@@ -279,8 +291,8 @@ function TicketTable({
                 <Badge color={ticket.status.color}>{ticket.status.name}</Badge>
               </td>
               <td className="px-3 py-2 text-xs text-muted-foreground">
-                {ticket.projectObject
-                  ? `${ticket.projectObject.client.name} · ${ticket.projectObject.name}`
+                {ticket.client
+                  ? [ticket.client.name, ticket.projectObject?.name].filter(Boolean).join(' · ')
                   : '—'}
               </td>
               <td className="px-3 py-2 text-xs">{ticket.team?.name ?? '—'}</td>

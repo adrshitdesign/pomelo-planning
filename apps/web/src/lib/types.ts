@@ -88,6 +88,9 @@ export interface Ticket {
   actualMinutes: number | null;
   teamId: string | null;
   team: Team | null;
+  /** Le client du ticket. C'est l'information principale ; l'objet est optionnel. */
+  clientId: string | null;
+  client: { id: string; name: string; color: string } | null;
   projectObjectId: string | null;
   projectObject:
     | (Pick<ProjectObject, 'id' | 'name' | 'color'> & { client: { id: string; name: string; color: string } })
@@ -111,6 +114,8 @@ export interface PlanningEvent {
   location: string | null;
   teamId: string | null;
   team: Team | null;
+  clientId: string | null;
+  client: { id: string; name: string; color: string } | null;
   projectObject: { id: string; name: string; client: { id: string; name: string } } | null;
   creator: UserSummary;
   participants: { id: string; userId: string; isOwner: boolean; user: UserSummary }[];

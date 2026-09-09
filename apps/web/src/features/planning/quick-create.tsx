@@ -4,7 +4,7 @@ import { fr } from 'date-fns/locale';
 import { Modal } from '@/components/ui/slide-over';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
-import type { ProjectObject, Status, Team, User } from '@/lib/types';
+import type { Client, ProjectObject, Status, Team, User } from '@/lib/types';
 
 export interface QuickCreateContext {
   date: Date;
@@ -20,6 +20,7 @@ export function QuickCreateModal({
   statuses,
   users,
   teams,
+  clients,
   projectObjects,
   onClose,
   onSubmit,
@@ -28,6 +29,7 @@ export function QuickCreateModal({
   statuses: Status[];
   users: User[];
   teams: Team[];
+  clients: Client[];
   projectObjects: ProjectObject[];
   onClose: () => void;
   onSubmit: (payload: Record<string, unknown>, openDetail: boolean) => Promise<void> | void;
@@ -37,9 +39,15 @@ export function QuickCreateModal({
   const [durationMinutes, setDuration] = useState(60);
   const [assigneeId, setAssignee] = useState('');
   const [teamId, setTeam] = useState('');
+  const [clientId, setClient] = useState('');
   const [projectObjectId, setProjectObject] = useState('');
   const [statusId, setStatus] = useState('');
   const [pending, setPending] = useState(false);
+
+  // La liste des objets suit le client choisi.
+  const objectChoices = clientId
+    ? projectObjects.filter((o) => o.clientId === clientId)
+    : projectObjects;
 
   if (!context) return null;
 
@@ -51,6 +59,7 @@ export function QuickCreateModal({
     setDuration(60);
     setAssignee('');
     setTeam('');
+    setClient('');
     setProjectObject('');
     setStatus('');
     setKind('ticket');
@@ -70,6 +79,7 @@ export function QuickCreateModal({
               estimatedMinutes: durationMinutes,
               statusId: statusId || undefined,
               teamId: teamId || undefined,
+              clientId: clientId || undefined,
               projectObjectId: projectObjectId || undefined,
               assignees: (assigneeId || context.resourceId)
                 ? [
@@ -87,6 +97,7 @@ export function QuickCreateModal({
               startAt: startAt.toISOString(),
               endAt: endAt.toISOString(),
               teamId: teamId || undefined,
+              clientId: clientId || undefined,
               projectObjectId: projectObjectId || undefined,
               participantIds: assigneeId || context.resourceId
                 ? [assigneeId || context.resourceId]
@@ -180,21 +191,48 @@ export function QuickCreateModal({
             </Select>
           </div>
           <div>
-            <Label htmlFor="quick-object">Objet</Label>
+            <Label htmlFor="quick-client">Client</Label>
             <Select
-              id="quick-object"
-              value={projectObjectId}
-              onChange={(e) => setProjectObject(e.target.value)}
+              id="quick-client"
+              value={clientId}
+              onChange={(e) => {
+                setClient(e.target.value);
+                // Un objet d'un autre client n'a plus lieu d'être.
+                const current = projectObjects.find((o) => o.id === projectObjectId);
+                if (current && current.clientId !== e.target.value) setProjectObject('');
+              }}
             >
               <option value="">—</option>
-              {projectObjects.map((object) => (
-                <option key={object.id} value={object.id}>
-                  {object.client?.name ? `${object.client.name} · ` : ''}
-                  {object.name}
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
                 </option>
               ))}
             </Select>
           </div>
+        </div>
+
+        <div>
+          <Label htmlFor="quick-object">
+            Objet <span className="font-normal text-muted-foreground">(facultatif)</span>
+          </Label>
+          <Select
+            id="quick-object"
+            value={projectObjectId}
+            onChange={(e) => {
+              setProjectObject(e.target.value);
+              const object = projectObjects.find((o) => o.id === e.target.value);
+              if (object) setClient(object.clientId);
+            }}
+          >
+            <option value="">—</option>
+            {objectChoices.map((object) => (
+              <option key={object.id} value={object.id}>
+                {!clientId && object.client?.name ? `${object.client.name} · ` : ''}
+                {object.name}
+              </option>
+            ))}
+          </Select>
         </div>
 
         {kind === 'ticket' && (
