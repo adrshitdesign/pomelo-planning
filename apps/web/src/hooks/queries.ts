@@ -28,6 +28,13 @@ export const useStatuses = () =>
 export const useUsers = () =>
   useQuery({ queryKey: keys.users(), queryFn: data.fetchUsers, staleTime: 300_000 });
 
+export const useArchivedUsers = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['users', 'archived'],
+    queryFn: data.fetchArchivedUsers,
+    enabled,
+  });
+
 export const useTeams = () =>
   useQuery({ queryKey: keys.teams(), queryFn: data.fetchTeams, staleTime: 300_000 });
 

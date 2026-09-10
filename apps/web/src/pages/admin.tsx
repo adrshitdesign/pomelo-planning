@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Briefcase, Plus, ShieldCheck, Users2, Tag, Tags } from 'lucide-react';
+import { Briefcase, ChevronDown, ChevronRight, Eye, EyeOff, Plus, ShieldCheck, Trash2, Users2, Tag, Tags } from 'lucide-react';
 import {
   archiveLabel,
   archiveProjectObject,
   archiveStatus,
+  archiveUser,
   createLabel,
+  deleteUser,
   createProjectObject,
   createStatus,
+  restoreUser,
   updateLabel,
   updateProjectObject,
   updateRolePermissions,
@@ -20,6 +23,7 @@ import { Modal } from '@/components/ui/slide-over';
 import { Avatar, Card, Spinner } from '@/components/ui/misc';
 import { useToast } from '@/components/ui/toast';
 import {
+  useArchivedUsers,
   useClients,
   useLabels,
   usePermissions,
@@ -87,13 +91,21 @@ export function AdminPage() {
 // ---------------------------------------------------------------------------
 
 function UsersTab() {
+  const { user: currentUser } = useAuth();
   const users = useUsers();
   const roles = useRoles();
   const teams = useTeams();
   const qc = useQueryClient();
   const toast = useToast();
+  const [showHidden, setShowHidden] = useState(false);
+  const [confirmHide, setConfirmHide] = useState<{ id: string; name: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const archived = useArchivedUsers(showHidden);
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ['users'] });
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ['users'] });
+  };
 
   const update = async (id: string, payload: Parameters<typeof updateUser>[1]) => {
     try {
@@ -101,6 +113,40 @@ function UsersTab() {
       void refresh();
     } catch (error) {
       toast.push(error instanceof Error ? error.message : 'Échec', { tone: 'error' });
+    }
+  };
+
+  const hide = async (id: string) => {
+    try {
+      await archiveUser(id);
+      void refresh();
+      toast.push('Compte masqué', { tone: 'success' });
+    } catch (error) {
+      toast.push(error instanceof Error ? error.message : 'Échec', { tone: 'error' });
+    }
+  };
+
+  const restore = async (id: string) => {
+    try {
+      await restoreUser(id);
+      void refresh();
+      toast.push('Compte réaffiché', { tone: 'success' });
+    } catch (error) {
+      toast.push(error instanceof Error ? error.message : 'Échec', { tone: 'error' });
+    }
+  };
+
+  const remove = async (id: string) => {
+    setDeleting(true);
+    try {
+      await deleteUser(id);
+      void refresh();
+      toast.push('Compte supprimé', { tone: 'success' });
+      setConfirmDelete(null);
+    } catch (error) {
+      toast.push(error instanceof Error ? error.message : 'Échec', { tone: 'error' });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -114,6 +160,10 @@ function UsersTab() {
           Les comptes se créent depuis l'écran de connexion, onglet « Créer un compte ».
           Attribuez ensuite un rôle ici : sans rôle, une personne ne voit rien.
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          <strong>Actif</strong> met un compte en pause (il reste dans la liste).{' '}
+          <strong>Masquer</strong> le retire de la liste et lui coupe tout accès — réversible.
+        </p>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border">
@@ -125,6 +175,7 @@ function UsersTab() {
               <th className="px-3 py-2 font-medium">Rôle</th>
               <th className="px-3 py-2 font-medium">Équipes</th>
               <th className="px-3 py-2 font-medium">Actif</th>
+              <th className="px-3 py-2 font-medium"></th>
             </tr>
           </thead>
           <tbody>
@@ -133,7 +184,15 @@ function UsersTab() {
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
                     <Avatar name={user.name} url={user.avatarUrl} size={22} />
-                    {user.name}
+                    <Input
+                      className="h-8 w-44"
+                      defaultValue={user.name}
+                      aria-label={`Nom de ${user.name}`}
+                      onBlur={(e) => {
+                        const value = e.target.value.trim();
+                        if (value && value !== user.name) void update(user.id, { name: value });
+                      }}
+                    />
                   </div>
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{user.email}</td>
@@ -174,12 +233,128 @@ function UsersTab() {
                     onChange={(e) => void update(user.id, { isActive: e.target.checked })}
                   />
                 </td>
+                <td className="px-3 py-2 text-right">
+                  {/* On ne peut agir ni se masquer ni se supprimer soi-même. */}
+                  {user.id !== currentUser?.id && (
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmHide({ id: user.id, name: user.name })}
+                      >
+                        <EyeOff className="h-3.5 w-3.5" /> Masquer
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setConfirmDelete({ id: user.id, name: user.name })}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Supprimer
+                      </Button>
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
+      {/* Comptes masqués */}
+      <div className="mt-4">
+        <button
+          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+          onClick={() => setShowHidden((v) => !v)}
+        >
+          {showHidden ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          Comptes masqués
+        </button>
+        {showHidden && (
+          <div className="mt-2 space-y-1.5">
+            {archived.isLoading && <Spinner />}
+            {(archived.data ?? []).map((user) => (
+              <Card key={user.id} className="flex items-center gap-3 py-2">
+                <Avatar name={user.name} url={user.avatarUrl} size={22} />
+                <span className="text-sm">{user.name}</span>
+                <span className="text-xs text-muted-foreground">{user.email}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto"
+                  onClick={() => void restore(user.id)}
+                >
+                  <Eye className="h-3.5 w-3.5" /> Réafficher
+                </Button>
+              </Card>
+            ))}
+            {!archived.isLoading && (archived.data ?? []).length === 0 && (
+              <p className="text-xs text-muted-foreground">Aucun compte masqué.</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {confirmHide && (
+        <Modal open onOpenChange={(o) => !o && setConfirmHide(null)} title="Masquer ce compte ?">
+          <p className="text-sm">
+            <strong>{confirmHide.name}</strong> disparaîtra de la liste et n'aura plus aucun accès à
+            l'application. Son historique (tickets créés, temps saisis) est conservé.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Réversible à tout moment depuis « Comptes masqués ».
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setConfirmHide(null)}>
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                void hide(confirmHide.id);
+                setConfirmHide(null);
+              }}
+            >
+              Masquer
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      {confirmDelete && (
+        <Modal
+          open
+          onOpenChange={(o) => !o && !deleting && setConfirmDelete(null)}
+          title="Supprimer définitivement ?"
+        >
+          <p className="text-sm">
+            Le compte de <strong>{confirmDelete.name}</strong> et son accès seront{' '}
+            <strong>effacés pour de bon</strong>. Cette action est irréversible.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Les tickets qu'il a créés sont conservés (auteur « — »). Pour un départ temporaire,
+            préférez « Masquer », qui est réversible.
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={deleting}
+              onClick={() => setConfirmDelete(null)}
+            >
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
+              onClick={() => void remove(confirmDelete.id)}
+            >
+              {deleting ? 'Suppression…' : 'Supprimer définitivement'}
+            </Button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }

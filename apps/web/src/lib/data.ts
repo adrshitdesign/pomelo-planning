@@ -788,6 +788,68 @@ export async function fetchAudit(params: {
 // Administration
 // ---------------------------------------------------------------------------
 
+/** Comptes masqués (archivés) — pour la section « comptes masqués ». */
+export async function fetchArchivedUsers(): Promise<User[]> {
+  const rows = unwrap<Row[]>(
+    await supabase
+      .from('profiles')
+      .select(PROFILE_SELECT)
+      .not('archived_at', 'is', null)
+      .order('name', { ascending: true }),
+  );
+  return rows.map(mapUser);
+}
+
+/**
+ * Masquer un compte : il disparaît des listes et perd tout accès. Les règles
+ * de la base exigent un compte actif et non archivé pour accorder la moindre
+ * permission : la personne masquée est donc bloquée côté base, pas seulement à
+ * l'écran. Réversible avec restoreUser.
+ */
+export async function archiveUser(id: string): Promise<void> {
+  unwrap(
+    await supabase
+      .from('profiles')
+      .update({ archived_at: new Date().toISOString(), is_active: false })
+      .eq('id', id)
+      .select('id'),
+  );
+}
+
+export async function restoreUser(id: string): Promise<void> {
+  unwrap(
+    await supabase
+      .from('profiles')
+      .update({ archived_at: null, is_active: true })
+      .eq('id', id)
+      .select('id'),
+  );
+}
+
+/**
+ * Supprimer DÉFINITIVEMENT un compte. Passe par la fonction serveur
+ * « delete-user » : le navigateur n'a pas le droit d'effacer un login, seule
+ * la fonction (qui détient la clé secrète) le peut. Voir
+ * supabase/functions/README-delete-user.md pour l'installer.
+ */
+export async function deleteUser(id: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('delete-user', {
+    body: { userId: id },
+  });
+  if (error) {
+    // Message clair si la fonction n'a pas encore été déployée.
+    const detail =
+      (data as { error?: string } | null)?.error ??
+      (error.message.includes('Failed to send') || error.message.includes('not found')
+        ? "La fonction de suppression n'est pas encore installée (voir le guide)."
+        : error.message);
+    throw new Error(detail);
+  }
+  if (data && (data as { error?: string }).error) {
+    throw new Error((data as { error: string }).error);
+  }
+}
+
 export async function updateUser(
   id: string,
   input: { isActive?: boolean; roleIds?: string[]; teamIds?: string[]; name?: string },
